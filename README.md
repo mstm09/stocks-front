@@ -46,11 +46,24 @@ APIの場所を変えるときは `API_TARGET=http://192.168.0.10:8000 npm run d
 
 stock-analysis 側で `API_TOKEN` を設定しているときは、`.env.example` を `.env.local` にコピーして `VITE_API_TOKEN` に同じ値を書く。
 
+## APIなしで動かす（仮のデータ）
+
+stock-analysis のAPIやMySQLを起動せずに、決まったデータで全画面を開ける。画面の見た目を直すときに使う。
+
+```bash
+npm run dev:mock
+```
+
+- 開発サーバーが `/api/...` に自分で答える（`mock/` の中身）。
+- 売買記録の登録や決済は、開発サーバーを動かしている間だけ覚えている。再起動すると元に戻る。
+- 数値は作り物。計算の決まりは本物に似せているが、同じではない。最後は本物のAPIで確かめる。
+
 ## コマンド
 
 | コマンド | 内容 |
 | :-- | :-- |
-| `npm run dev` | 開発サーバーを起動する |
+| `npm run dev` | 開発サーバーを起動する（stock-analysis のAPIへつなぐ） |
+| `npm run dev:mock` | 開発サーバーを起動する（仮のデータで答える） |
 | `npm test` | テストを実行する（`npm run test:watch` は、保存のたびに実行） |
 | `npm run lint` | 書き方を検査する |
 | `npm run build` | 型を検査して、公開用のファイルを `dist/` に作る |
@@ -74,6 +87,8 @@ npm run api:fetch && npm run api:gen
 index.html            入口のHTML。<div id="root"> にReactの画面が入る
 vite.config.ts        Viteの設定（APIへの中継、テストの設定）
 openapi/openapi.json  APIの仕様書（stock-analysis から取ったもの）
+components.json       shadcn/ui の設定
+mock/                 仮のデータと、仮のAPI（`npm run dev:mock` 用）
 src/
   main.tsx            入口。Reactを起動する
   routes.tsx          URLと画面の対応表
@@ -82,7 +97,9 @@ src/
   api/schema.d.ts     APIの型（自動生成。手で直さない）
   lib/api.ts          APIを呼ぶ部品
   lib/format.ts       数値や銘柄コードを、画面に出す文字に直す
+  lib/utils.ts        shadcn/ui の部品が使う関数（cn = クラス名をつなぐ）
   components/         複数の画面で使う部品（Layout = 共通の枠）
+  components/ui/      shadcn/ui の部品（`npx shadcn@latest add <名前>` で増やす。自動生成）
   features/           機能ごとの部品（candidates = 売り建て候補の表、チャート、APIの呼び出し）
   pages/              画面（1画面 = 1ファイル）。`*.test.tsx` はそのテスト
   test/               テストの前準備と、テスト用の道具

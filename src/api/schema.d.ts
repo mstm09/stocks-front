@@ -41,6 +41,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/stocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stocks
+         * @description 銘柄マスタを探す（画面の検索用）。コードが先頭から一致する銘柄を先に返す。
+         */
+        get: operations["stocks_stocks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/markets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Markets
+         * @description 市場区分名の一覧（`market` で絞り込むときの選択肢）。
+         */
+        get: operations["markets_markets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/stocks/{code}/indicators": {
         parameters: {
             query?: never;
@@ -741,6 +781,40 @@ export interface components {
             sectors: components["schemas"]["SectorRankItem"][];
         };
         /**
+         * StockSummary
+         * @description 銘柄マスタの1件（画面の検索結果）。
+         */
+        StockSummary: {
+            /**
+             * Code
+             * @description 銘柄コード（5桁）
+             * @example 86970
+             */
+            code: string;
+            /**
+             * Name
+             * @description 銘柄名
+             * @example 日本取引所グループ
+             */
+            name: string;
+            /**
+             * Market Name
+             * @description 市場区分名
+             * @example プライム
+             */
+            market_name?: string | null;
+            /**
+             * Sector33
+             * @description 33業種の名前
+             */
+            sector33?: string | null;
+            /**
+             * Is Active
+             * @description 上場中か（上場廃止後も残る）
+             */
+            is_active: boolean;
+        };
+        /**
          * TradeIn
          * @description 売買（新規の約定）の登録。
          */
@@ -966,6 +1040,60 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stocks_stocks_get: {
+        parameters: {
+            query: {
+                /** @description 銘柄コード（前方一致）か、銘柄名（部分一致） */
+                q: string;
+                /** @description 返す件数の上限 */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    markets_markets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
                 };
             };
         };

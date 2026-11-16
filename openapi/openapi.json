@@ -89,6 +89,106 @@
         }
       }
     },
+    "/stocks": {
+      "get": {
+        "tags": [
+          "stocks"
+        ],
+        "summary": "Stocks",
+        "description": "銘柄マスタを探す（画面の検索用）。コードが先頭から一致する銘柄を先に返す。",
+        "operationId": "stocks_stocks_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "銘柄コード（前方一致）か、銘柄名（部分一致）",
+              "title": "Q"
+            },
+            "description": "銘柄コード（前方一致）か、銘柄名（部分一致）"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "返す件数の上限",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "返す件数の上限"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StockSummary"
+                  },
+                  "title": "Response Stocks Stocks Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/markets": {
+      "get": {
+        "tags": [
+          "market"
+        ],
+        "summary": "Markets",
+        "description": "市場区分名の一覧（`market` で絞り込むときの選択肢）。",
+        "operationId": "markets_markets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "title": "Response Markets Markets Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/stocks/{code}/indicators": {
       "get": {
         "tags": [
@@ -1869,6 +1969,66 @@
         ],
         "title": "SectorRanking",
         "description": "33業種の上昇率ランキング。上昇率は単純平均で、東証の業種別株価指数とは一致しない。"
+      },
+      "StockSummary": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "銘柄コード（5桁）",
+            "examples": [
+              "86970"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "銘柄名",
+            "examples": [
+              "日本取引所グループ"
+            ]
+          },
+          "market_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Name",
+            "description": "市場区分名",
+            "examples": [
+              "プライム"
+            ]
+          },
+          "sector33": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector33",
+            "description": "33業種の名前"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "description": "上場中か（上場廃止後も残る）"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "is_active"
+        ],
+        "title": "StockSummary",
+        "description": "銘柄マスタの1件（画面の検索結果）。"
       },
       "TradeIn": {
         "properties": {
