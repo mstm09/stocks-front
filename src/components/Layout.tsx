@@ -1,7 +1,10 @@
 import { NavLink, Outlet } from 'react-router'
 
 /** 画面の上に出すメニュー。画面を増やしたら、ここにも足す。 */
-const NAV_ITEMS = [{ to: '/', label: 'ホーム' }]
+const NAV_ITEMS = [
+  { to: '/', label: 'ホーム' },
+  { to: '/candidates', label: '売り建て候補' },
+]
 
 /** 全画面で共通の枠（上のメニュー）。<Outlet /> の位置に、URLに合った画面が入る。 */
 export function Layout() {
