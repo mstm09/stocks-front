@@ -81,10 +81,19 @@ src/
   index.css           Tailwind CSSの読み込みと、全体の色
   api/schema.d.ts     APIの型（自動生成。手で直さない）
   lib/api.ts          APIを呼ぶ部品
+  lib/format.ts       数値や銘柄コードを、画面に出す文字に直す
   components/         複数の画面で使う部品（Layout = 共通の枠）
+  features/           機能ごとの部品（candidates = 売り建て候補の表、チャート、APIの呼び出し）
   pages/              画面（1画面 = 1ファイル）。`*.test.tsx` はそのテスト
   test/               テストの前準備と、テスト用の道具
 ```
+
+## 画面
+
+| URL | 内容 | 使うAPI |
+| :-- | :-- | :-- |
+| `/` | APIとの接続の確認 | `GET /health` |
+| `/candidates` | 売り建て候補の表。行を選ぶと、チャートと条件A〜Gの判定を出す | `GET /candidates`、`GET /stocks/{code}/chart` |
 
 ## 画面を増やす手順
 
