@@ -1,0 +1,14 @@
+/* Tailwind CSS を読み込む。見た目は、各部品の className に書く。 */
+@import "tailwindcss";
+
+@theme {
+  /* 日本の株価の色。値上がり・陽線は赤、値下がり・陰線は青（チャートと同じ） */
+  --color-up: #dc2626;
+  --color-down: #2563eb;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+  font-family:
+    system-ui, -apple-system, 'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic UI', sans-serif;
+}
