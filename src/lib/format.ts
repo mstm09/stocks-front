@@ -48,3 +48,8 @@ export function formatPnl(value: number | null | undefined): string {
   if (value == null) return '-'
   return `${value > 0 ? '+' : ''}${integer.format(value)}`
 }
+
+/** 想定損失の何倍か。+2.00R なら、取ったリスクの2倍の利益。-1.00R なら、計画どおりのロスカット。 */
+export function formatR(value: number | null | undefined): string {
+  return value == null ? '-' : `${value > 0 ? '+' : ''}${value.toFixed(2)}R`
+}
