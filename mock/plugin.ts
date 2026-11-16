@@ -3,9 +3,9 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Plugin } from 'vite'
-import { chartSvg, findStock, indicatorsOf, LATEST_DATE, STOCKS } from './data'
-import { breadth, sectors } from './market'
-import * as trades from './trades'
+import { chartSvg, findStock, indicatorsOf, LATEST_DATE, STOCKS } from './data.ts'
+import { breadth, sectors } from './market.ts'
+import * as trades from './trades.ts'
 
 type Result = { status?: number; body?: unknown; svg?: string }
 

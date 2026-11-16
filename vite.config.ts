@@ -3,7 +3,7 @@ import path from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
-import { mockApi } from './mock/plugin'
+import { mockApi } from './mock/plugin.ts'
 
 // APIの場所。開発中は、手元で動かしている stock-analysis（uv run stock-analysis serve）につなぐ。
 const API_TARGET = process.env.API_TARGET ?? 'http://127.0.0.1:8000'

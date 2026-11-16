@@ -23,3 +23,28 @@ const ZONE_LABELS: Record<string, string> = { UPPER: '上段', MIDDLE: '中段',
 export function formatZone(zone: string | null | undefined): string {
   return zone == null ? '-' : (ZONE_LABELS[zone] ?? zone)
 }
+
+/** 騰落率（%）。+1.25% / -0.80% のように、符号を付けて出す。 */
+export function formatChange(value: number | null | undefined): string {
+  if (value == null) return '-'
+  return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`
+}
+
+/** 値上がりは赤、値下がりは青（日本の株価の色）。0や値なしは色なし。 */
+export function changeColor(value: number | null | undefined): string {
+  if (value == null || value === 0) return ''
+  return value > 0 ? 'text-up' : 'text-down'
+}
+
+const integer = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 })
+
+/** 金額（円）。3,000,000 のように、小数なしで出す。 */
+export function formatYen(value: number | null | undefined): string {
+  return value == null ? '-' : integer.format(value)
+}
+
+/** 損益（円）。+27,200 / -5,000 のように、符号を付けて出す。 */
+export function formatPnl(value: number | null | undefined): string {
+  if (value == null) return '-'
+  return `${value > 0 ? '+' : ''}${integer.format(value)}`
+}

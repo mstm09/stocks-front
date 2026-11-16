@@ -2,6 +2,7 @@ import type { RouteObject } from 'react-router'
 import { Layout } from '@/components/Layout'
 import { CandidatesPage } from '@/pages/CandidatesPage'
 import { HomePage } from '@/pages/HomePage'
+import { MarketPage } from '@/pages/MarketPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { StockDetailPage } from '@/pages/StockDetailPage'
 
@@ -17,6 +18,7 @@ export const routes: RouteObject[] = [
       { index: true, element: <HomePage /> },
       { path: 'candidates', element: <CandidatesPage /> },
       { path: 'stocks/:code', element: <StockDetailPage /> },
+      { path: 'market', element: <MarketPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

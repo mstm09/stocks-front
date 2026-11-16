@@ -1,7 +1,7 @@
 // 仮のデータ。`npm run dev:mock` のときだけ使う（本番のファイルには入らない）。
 // 毎回同じ値になるように、決まった種から作った乱数で株価を作る。
 
-import type { components } from '../src/api/schema'
+import type { components } from '../src/api/schema.d.ts'
 
 type Schemas = components['schemas']
 export type Indicators = Schemas['Indicators']

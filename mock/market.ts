@@ -1,7 +1,7 @@
 // 仮のデータから、騰落と業種ランキングを計算する（本物は stock-analysis の market/stats.py）。
 
-import type { components } from '../src/api/schema'
-import { STOCKS, TRADING_DAYS, type MockStock } from './data'
+import type { components } from '../src/api/schema.d.ts'
+import { STOCKS, TRADING_DAYS, type MockStock } from './data.ts'
 
 type Schemas = components['schemas']
 type Period = 'day' | 'week' | 'month'

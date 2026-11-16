@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 const NAV_ITEMS = [
   { to: '/', label: 'ホーム' },
   { to: '/candidates', label: '売り建て候補' },
+  { to: '/market', label: '市場' },
 ]
 
 /** 全画面で共通の枠（上のメニュー）。<Outlet /> の位置に、URLに合った画面が入る。 */
