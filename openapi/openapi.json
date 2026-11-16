@@ -1,0 +1,2318 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "stock-analysis API",
+    "description": "売り建て候補の一覧、指標の数値、ローソク足チャート（PNG）を返す。",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/candidates": {
+      "get": {
+        "tags": [
+          "stocks"
+        ],
+        "summary": "Candidates",
+        "description": "売り建て候補の一覧。各銘柄の指標つき（チャートは `chart_url`）。",
+        "operationId": "candidates_candidates_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "基準日（YYYY-MM-DD）。省略時は指標がある最新日",
+              "title": "As Of"
+            },
+            "description": "基準日（YYYY-MM-DD）。省略時は指標がある最新日"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Candidates"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stocks/{code}/indicators": {
+      "get": {
+        "tags": [
+          "stocks"
+        ],
+        "summary": "Indicators",
+        "description": "1銘柄の指標（チャート画像と一緒に渡す数値）。",
+        "operationId": "indicators_stocks__code__indicators_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Code"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "基準日（YYYY-MM-DD）。省略時は指標がある最新日",
+              "title": "As Of"
+            },
+            "description": "基準日（YYYY-MM-DD）。省略時は指標がある最新日"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Indicators"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stocks/{code}/chart": {
+      "get": {
+        "tags": [
+          "stocks"
+        ],
+        "summary": "Chart",
+        "description": "ローソク足チャート（日足・移動平均線つき）。Claudeへ渡すのはPNG。",
+        "operationId": "chart_stocks__code__chart_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Code"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "基準日（YYYY-MM-DD）。省略時は指標がある最新日",
+              "title": "As Of"
+            },
+            "description": "基準日（YYYY-MM-DD）。省略時は指標がある最新日"
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "png",
+                "svg"
+              ],
+              "type": "string",
+              "description": "画像の形式",
+              "default": "png",
+              "title": "Format"
+            },
+            "description": "画像の形式"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "image/png": {},
+              "image/svg+xml": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/market/breadth": {
+      "get": {
+        "tags": [
+          "market"
+        ],
+        "summary": "Breadth",
+        "description": "騰落（値上がり・値下がり・変わらずの銘柄数と比率）。新しい順に `count` 期間ぶん。",
+        "operationId": "breadth_market_breadth_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "type": "string",
+              "description": "期間。day=前日比、week=前週末比、month=前月末比",
+              "default": "day",
+              "title": "Period"
+            },
+            "description": "期間。day=前日比、week=前週末比、month=前月末比"
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "基準日（YYYY-MM-DD）。省略時は日足がある最新日",
+              "title": "As Of"
+            },
+            "description": "基準日（YYYY-MM-DD）。省略時は日足がある最新日"
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 60,
+              "minimum": 1,
+              "description": "出す期間の数",
+              "default": 1,
+              "title": "Count"
+            },
+            "description": "出す期間の数"
+          },
+          {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "市場区分名で絞る（例: プライム）。省略時は全銘柄",
+              "title": "Market"
+            },
+            "description": "市場区分名で絞る（例: プライム）。省略時は全銘柄"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BreadthList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/market/sectors": {
+      "get": {
+        "tags": [
+          "market"
+        ],
+        "summary": "Sectors",
+        "description": "33業種の上昇率ランキング（所属銘柄の騰落率の単純平均。上昇率の高い順）。",
+        "operationId": "sectors_market_sectors_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "type": "string",
+              "description": "期間。day=前日比、week=前週末比、month=前月末比",
+              "default": "day",
+              "title": "Period"
+            },
+            "description": "期間。day=前日比、week=前週末比、month=前月末比"
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "基準日（YYYY-MM-DD）。省略時は日足がある最新日",
+              "title": "As Of"
+            },
+            "description": "基準日（YYYY-MM-DD）。省略時は日足がある最新日"
+          },
+          {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "市場区分名で絞る（例: プライム）。省略時は全銘柄",
+              "title": "Market"
+            },
+            "description": "市場区分名で絞る（例: プライム）。省略時は全銘柄"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectorRanking"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trades": {
+      "get": {
+        "tags": [
+          "trades"
+        ],
+        "summary": "List Trades",
+        "description": "売買の一覧（新規の日が古い順）。",
+        "operationId": "list_trades_trades_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "OPEN",
+                    "CLOSED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "OPEN=保有中 / CLOSED=決済済み。省略時は全部",
+              "title": "Status"
+            },
+            "description": "OPEN=保有中 / CLOSED=決済済み。省略時は全部"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TradeOut"
+                  },
+                  "title": "Response List Trades Trades Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "trades"
+        ],
+        "summary": "Add Trade",
+        "description": "売買（新規の約定）を登録する。",
+        "operationId": "add_trade_trades_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TradeIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trades/{trade_id}": {
+      "get": {
+        "tags": [
+          "trades"
+        ],
+        "summary": "Get Trade",
+        "operationId": "get_trade_trades__trade_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trade_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Trade Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "trades"
+        ],
+        "summary": "Update Trade",
+        "description": "ロスカット・指値・メモ・自己採点を変える。送った項目だけ変わる。",
+        "operationId": "update_trade_trades__trade_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trade_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Trade Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TradeUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "trades"
+        ],
+        "summary": "Delete Trade",
+        "description": "売買を、決済ごと消す（登録の間違いを直すため）。",
+        "operationId": "delete_trade_trades__trade_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trade_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Trade Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trades/{trade_id}/exits": {
+      "post": {
+        "tags": [
+          "trades"
+        ],
+        "summary": "Add Exit",
+        "description": "決済（約定）を登録する。株数を省略すると、残りを全部決済する。",
+        "operationId": "add_exit_trades__trade_id__exits_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trade_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Trade Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExitIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trades/{trade_id}/exits/{exit_id}": {
+      "delete": {
+        "tags": [
+          "trades"
+        ],
+        "summary": "Delete Exit",
+        "description": "決済を1件消す（登録の間違いを直すため）。",
+        "operationId": "delete_exit_trades__trade_id__exits__exit_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trade_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Trade Id"
+            }
+          },
+          {
+            "name": "exit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Exit Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cash": {
+      "get": {
+        "tags": [
+          "trades"
+        ],
+        "summary": "List Cash",
+        "description": "入出金の一覧。",
+        "operationId": "list_cash_cash_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CashOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Cash Cash Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "trades"
+        ],
+        "summary": "Add Cash",
+        "description": "入出金を登録する。入金はプラス、出金はマイナス。",
+        "operationId": "add_cash_cash_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CashIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CashOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/cash/{cash_id}": {
+      "delete": {
+        "tags": [
+          "trades"
+        ],
+        "summary": "Delete Cash",
+        "operationId": "delete_cash_cash__cash_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cash_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Cash Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portfolio": {
+      "get": {
+        "tags": [
+          "trades"
+        ],
+        "summary": "Get Portfolio",
+        "description": "口座全体（現金残高、保有中の評価、損益）。",
+        "operationId": "get_portfolio_portfolio_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "基準日（YYYY-MM-DD）。省略時は今日",
+              "title": "As Of"
+            },
+            "description": "基準日（YYYY-MM-DD）。省略時は今日"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BreadthItem": {
+        "properties": {
+          "period": {
+            "type": "string",
+            "title": "Period",
+            "description": "期間の種類。day / week / month"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date",
+            "description": "期間の最初の営業日"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date",
+            "description": "期間の最後の営業日（基準日まで）"
+          },
+          "base_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Base Date",
+            "description": "比べる相手。前の期間の最後の営業日"
+          },
+          "up": {
+            "type": "integer",
+            "title": "Up",
+            "description": "値上がり銘柄数"
+          },
+          "down": {
+            "type": "integer",
+            "title": "Down",
+            "description": "値下がり銘柄数"
+          },
+          "unchanged": {
+            "type": "integer",
+            "title": "Unchanged",
+            "description": "変わらずの銘柄数"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "数えた銘柄数（両方の日に終値がある銘柄）"
+          },
+          "ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ratio",
+            "description": "値上がり ÷ 値下がり × 100。値下がりが0のときは null"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period",
+          "start_date",
+          "end_date",
+          "base_date",
+          "up",
+          "down",
+          "unchanged",
+          "total"
+        ],
+        "title": "BreadthItem",
+        "description": "1期間の騰落。前の期間の最後の営業日（`base_date`）の終値と、`end_date` の終値を比べる。"
+      },
+      "BreadthList": {
+        "properties": {
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          },
+          "market": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market",
+            "description": "絞り込んだ市場区分。null は全銘柄"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BreadthItem"
+            },
+            "type": "array",
+            "title": "Items",
+            "description": "新しい順"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period",
+          "as_of_date",
+          "items"
+        ],
+        "title": "BreadthList"
+      },
+      "Candidates": {
+        "properties": {
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/Indicators"
+            },
+            "type": "array",
+            "title": "Candidates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of_date",
+          "count",
+          "candidates"
+        ],
+        "title": "Candidates"
+      },
+      "CashIn": {
+        "properties": {
+          "occurred_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Occurred On",
+            "description": "入出金の日"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount",
+            "description": "金額（円）。入金はプラス、出金はマイナス"
+          },
+          "memo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "occurred_on",
+          "amount"
+        ],
+        "title": "CashIn"
+      },
+      "CashOut": {
+        "properties": {
+          "occurred_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Occurred On",
+            "description": "入出金の日"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount",
+            "description": "金額（円）。入金はプラス、出金はマイナス"
+          },
+          "memo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memo"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "occurred_on",
+          "amount",
+          "id"
+        ],
+        "title": "CashOut"
+      },
+      "ExitIn": {
+        "properties": {
+          "closed_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Closed On",
+            "description": "決済の約定日"
+          },
+          "price": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Price",
+            "description": "決済の約定価格（円）"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity",
+            "description": "決済する株数。省略時は残り全部"
+          },
+          "fee": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Fee",
+            "description": "手数料・金利・貸株料など（円）",
+            "default": 0
+          },
+          "memo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "closed_on",
+          "price"
+        ],
+        "title": "ExitIn",
+        "description": "決済（約定）の登録。"
+      },
+      "ExitOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "closed_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Closed On"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          },
+          "price": {
+            "type": "number",
+            "title": "Price"
+          },
+          "fee": {
+            "type": "number",
+            "title": "Fee"
+          },
+          "pnl": {
+            "type": "number",
+            "title": "Pnl",
+            "description": "この決済の損益（円。この決済の費用を引いたあと）"
+          },
+          "memo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "closed_on",
+          "quantity",
+          "price",
+          "fee",
+          "pnl",
+          "memo"
+        ],
+        "title": "ExitOut"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Indicators": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "銘柄コード（5桁）",
+            "examples": [
+              "86970"
+            ]
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "銘柄名",
+            "examples": [
+              "日本取引所グループ"
+            ]
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date",
+            "description": "計算の基準日"
+          },
+          "close": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Close",
+            "description": "基準日の調整後終値（円）"
+          },
+          "ma10": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ma10",
+            "description": "日足の短期（10日）移動平均"
+          },
+          "ma25": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ma25",
+            "description": "日足の中期（25日）移動平均"
+          },
+          "ma60": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ma60",
+            "description": "日足の長期（60日）移動平均"
+          },
+          "wma13": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wma13",
+            "description": "週足13週の移動平均（直前に終わった週まで）"
+          },
+          "wma26": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wma26",
+            "description": "週足26週の移動平均（直前に終わった週まで）"
+          },
+          "range_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Range High",
+            "description": "価格帯の高値（調整後）"
+          },
+          "range_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Range Low",
+            "description": "価格帯の安値（調整後）"
+          },
+          "range_zone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Range Zone",
+            "description": "現在の株価の価格帯。UPPER / MIDDLE / LOWER"
+          },
+          "daily_order_ok": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Order Ok",
+            "description": "条件A: 日足 60日 > 25日 > 10日"
+          },
+          "daily_down_ok": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Down Ok",
+            "description": "条件B: 日足の向きが下"
+          },
+          "weekly_order_ok": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weekly Order Ok",
+            "description": "条件C: 週足 26週 > 13週"
+          },
+          "weekly_down_ok": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weekly Down Ok",
+            "description": "条件D: 週足の向きが下"
+          },
+          "turnover_below_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Turnover Below Days",
+            "description": "過去2年で、売買代金が基準以下だった日数"
+          },
+          "turnover_ok": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Turnover Ok",
+            "description": "条件F: 売買代金"
+          },
+          "tick_ok": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tick Ok",
+            "description": "条件G: Tick回数。契約前は null"
+          },
+          "is_short_candidate": {
+            "type": "boolean",
+            "title": "Is Short Candidate",
+            "description": "売り建て候補か（有効な条件をすべて満たす）"
+          },
+          "atr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Atr",
+            "description": "ATR（1日の値幅の平均。円）。既定は20日。候補の条件には使わない"
+          },
+          "atr_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Atr Pct",
+            "description": "ATR ÷ 基準日の終値（%）"
+          },
+          "chart_url": {
+            "type": "string",
+            "title": "Chart Url",
+            "description": "チャート画像（PNG）のパス。基準日つき"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "as_of_date",
+          "is_short_candidate",
+          "chart_url"
+        ],
+        "title": "Indicators",
+        "description": "1銘柄の指標。チャート画像と一緒にClaudeへ渡す数値（docs/chart.md §5）。"
+      },
+      "PortfolioOut": {
+        "properties": {
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          },
+          "equity": {
+            "type": "number",
+            "title": "Equity",
+            "description": "口座全体の金額（円）"
+          },
+          "cash": {
+            "type": "number",
+            "title": "Cash",
+            "description": "現金残高（円）"
+          },
+          "spot_value": {
+            "type": "number",
+            "title": "Spot Value",
+            "description": "保有中の現物の評価額（円）"
+          },
+          "margin_exposure": {
+            "type": "number",
+            "title": "Margin Exposure",
+            "description": "保有中の信用建玉の金額（新規価格 × 残りの株数）"
+          },
+          "net_deposit": {
+            "type": "number",
+            "title": "Net Deposit",
+            "description": "入金 − 出金"
+          },
+          "total_pnl": {
+            "type": "number",
+            "title": "Total Pnl",
+            "description": "確定損益 ＋ 含み損益"
+          },
+          "realized_pnl": {
+            "type": "number",
+            "title": "Realized Pnl"
+          },
+          "unrealized_pnl": {
+            "type": "number",
+            "title": "Unrealized Pnl"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/PositionOut"
+            },
+            "type": "array",
+            "title": "Positions"
+          },
+          "unpriced_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unpriced Codes",
+            "description": "終値がなく、評価できなかった銘柄"
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of_date",
+          "equity",
+          "cash",
+          "spot_value",
+          "margin_exposure",
+          "net_deposit",
+          "total_pnl",
+          "realized_pnl",
+          "unrealized_pnl",
+          "positions",
+          "unpriced_codes"
+        ],
+        "title": "PortfolioOut",
+        "description": "口座全体。口座全体の金額 = 現金残高 ＋ 現物の評価額 ＋ 信用の含み損益 = 入出金 ＋ 損益。"
+      },
+      "PositionOut": {
+        "properties": {
+          "trade": {
+            "$ref": "#/components/schemas/TradeOut"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price",
+            "description": "評価に使った終値（調整前）"
+          },
+          "price_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Date",
+            "description": "その終値の日付"
+          },
+          "market_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Value",
+            "description": "残りの株数 × 終値"
+          },
+          "unrealized_pnl": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unrealized Pnl",
+            "description": "含み損益（円）"
+          },
+          "to_stop_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Stop Pct",
+            "description": "終値からロスカットまでの距離（%）"
+          }
+        },
+        "type": "object",
+        "required": [
+          "trade",
+          "price",
+          "price_date",
+          "market_value",
+          "unrealized_pnl",
+          "to_stop_pct"
+        ],
+        "title": "PositionOut"
+      },
+      "SectorRankItem": {
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "title": "Rank",
+            "description": "順位（1が最も上昇）"
+          },
+          "sector33": {
+            "type": "string",
+            "title": "Sector33",
+            "description": "33業種の名前",
+            "examples": [
+              "電気機器"
+            ]
+          },
+          "change_pct": {
+            "type": "number",
+            "title": "Change Pct",
+            "description": "所属銘柄の騰落率の単純平均（%）"
+          },
+          "median_pct": {
+            "type": "number",
+            "title": "Median Pct",
+            "description": "所属銘柄の騰落率の中央値（%）"
+          },
+          "up": {
+            "type": "integer",
+            "title": "Up",
+            "description": "値上がり銘柄数"
+          },
+          "down": {
+            "type": "integer",
+            "title": "Down",
+            "description": "値下がり銘柄数"
+          },
+          "unchanged": {
+            "type": "integer",
+            "title": "Unchanged",
+            "description": "変わらずの銘柄数"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "数えた銘柄数"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rank",
+          "sector33",
+          "change_pct",
+          "median_pct",
+          "up",
+          "down",
+          "unchanged",
+          "total"
+        ],
+        "title": "SectorRankItem"
+      },
+      "SectorRanking": {
+        "properties": {
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          },
+          "market": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market",
+            "description": "絞り込んだ市場区分。null は全銘柄"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date",
+            "description": "期間の最初の営業日"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date",
+            "description": "期間の最後の営業日（基準日まで）"
+          },
+          "base_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Date",
+            "description": "比べる相手。前の期間の最後の営業日"
+          },
+          "sectors": {
+            "items": {
+              "$ref": "#/components/schemas/SectorRankItem"
+            },
+            "type": "array",
+            "title": "Sectors",
+            "description": "上昇率の高い順"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period",
+          "as_of_date",
+          "sectors"
+        ],
+        "title": "SectorRanking",
+        "description": "33業種の上昇率ランキング。上昇率は単純平均で、東証の業種別株価指数とは一致しない。"
+      },
+      "TradeIn": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "銘柄コード（4桁か5桁）",
+            "examples": [
+              "8697"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "MARGIN_SHORT",
+              "MARGIN_LONG",
+              "SPOT"
+            ],
+            "title": "Kind",
+            "description": "MARGIN_SHORT=信用売り / MARGIN_LONG=信用買い / SPOT=現物買い"
+          },
+          "opened_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Opened On",
+            "description": "新規の約定日"
+          },
+          "quantity": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Quantity",
+            "description": "株数"
+          },
+          "entry_price": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Entry Price",
+            "description": "新規の約定価格（円）"
+          },
+          "entry_fee": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Entry Fee",
+            "description": "新規の手数料など（円）",
+            "default": 0
+          },
+          "stop_loss_price": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Loss Price",
+            "description": "ロスカットの価格"
+          },
+          "stop_loss_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Loss Reason",
+            "description": "ロスカットの根拠"
+          },
+          "limit_price": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Price",
+            "description": "指値（利益確定などの注文価格）"
+          },
+          "memo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memo",
+            "description": "売買の理由などのメモ"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "kind",
+          "opened_on",
+          "quantity",
+          "entry_price"
+        ],
+        "title": "TradeIn",
+        "description": "売買（新規の約定）の登録。"
+      },
+      "TradeOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "kind_label": {
+            "type": "string",
+            "title": "Kind Label",
+            "description": "種類の表示名（信用売り など）"
+          },
+          "opened_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Opened On"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          },
+          "entry_price": {
+            "type": "number",
+            "title": "Entry Price"
+          },
+          "entry_fee": {
+            "type": "number",
+            "title": "Entry Fee"
+          },
+          "stop_loss_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Loss Price"
+          },
+          "stop_loss_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Loss Reason"
+          },
+          "limit_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Price"
+          },
+          "memo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memo"
+          },
+          "self_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Self Score"
+          },
+          "self_review": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Self Review"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "OPEN=保有中 / CLOSED=決済済み"
+          },
+          "remaining_quantity": {
+            "type": "integer",
+            "title": "Remaining Quantity"
+          },
+          "closed_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed On",
+            "description": "すべて決済した日"
+          },
+          "realized_pnl": {
+            "type": "number",
+            "title": "Realized Pnl",
+            "description": "確定損益（円。費用を引いたあと）"
+          },
+          "risk_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Amount",
+            "description": "ロスカットまでの想定損失（円）"
+          },
+          "r_multiple": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "R Multiple",
+            "description": "確定損益 ÷ 想定損失（すべて決済したあと）"
+          },
+          "exits": {
+            "items": {
+              "$ref": "#/components/schemas/ExitOut"
+            },
+            "type": "array",
+            "title": "Exits"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "name",
+          "kind",
+          "kind_label",
+          "opened_on",
+          "quantity",
+          "entry_price",
+          "entry_fee",
+          "stop_loss_price",
+          "stop_loss_reason",
+          "limit_price",
+          "memo",
+          "self_score",
+          "self_review",
+          "status",
+          "remaining_quantity",
+          "closed_on",
+          "realized_pnl",
+          "risk_amount",
+          "r_multiple",
+          "exits"
+        ],
+        "title": "TradeOut"
+      },
+      "TradeUpdate": {
+        "properties": {
+          "stop_loss_price": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Loss Price"
+          },
+          "stop_loss_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Loss Reason"
+          },
+          "limit_price": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Price"
+          },
+          "memo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memo"
+          },
+          "entry_fee": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Fee"
+          },
+          "self_score": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Self Score",
+            "description": "自己採点（0〜100）"
+          },
+          "self_review": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Self Review",
+            "description": "振り返りのコメント"
+          }
+        },
+        "type": "object",
+        "title": "TradeUpdate",
+        "description": "あとから変えられる項目。送った項目だけ変わる（null を送ると消える）。"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}
