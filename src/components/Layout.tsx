@@ -1,4 +1,6 @@
 import { NavLink, Outlet } from 'react-router'
+import { StockSearch } from '@/features/stocks/StockSearch'
+import { cn } from '@/lib/utils'
 
 /** 画面の上に出すメニュー。画面を増やしたら、ここにも足す。 */
 const NAV_ITEMS = [
@@ -9,8 +11,8 @@ const NAV_ITEMS = [
 /** 全画面で共通の枠（上のメニュー）。<Outlet /> の位置に、URLに合った画面が入る。 */
 export function Layout() {
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-slate-200 bg-white">
+    <div className="min-h-screen bg-muted/40">
+      <header className="sticky top-0 z-10 border-b bg-background">
         <div className="mx-auto flex h-12 max-w-screen-2xl items-center gap-6 px-4">
           <span className="font-semibold tracking-tight">stocks-front</span>
           <nav className="flex gap-1 text-sm">
@@ -18,19 +20,23 @@ export function Layout() {
               <NavLink
                 key={item.to}
                 to={item.to}
-                end
+                end={item.to === '/'}
                 className={({ isActive }) =>
-                  `rounded px-3 py-1.5 ${
+                  cn(
+                    'rounded-md px-3 py-1.5',
                     isActive
-                      ? 'bg-slate-900 text-white'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                  }`
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                  )
                 }
               >
                 {item.label}
               </NavLink>
             ))}
           </nav>
+          <div className="ml-auto">
+            <StockSearch />
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-screen-2xl px-4 py-6">

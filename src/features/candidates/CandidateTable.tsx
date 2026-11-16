@@ -1,6 +1,15 @@
 import { useMemo, useState } from 'react'
 import { formatCode, formatPct, formatPrice, formatZone } from '@/lib/format'
-import type { Indicators } from './api'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import type { Indicators } from '@/features/stocks/api'
+import { cn } from '@/lib/utils'
 
 type SortKey = 'code' | 'close' | 'atr_pct' | 'turnover_below_days'
 type Sort = { key: SortKey; desc: boolean }
@@ -44,65 +53,64 @@ export function CandidateTable({ candidates, selectedCode, onSelect }: Props) {
   }
 
   return (
-    <div className="overflow-auto rounded-lg border border-slate-200 bg-white">
-      <table className="w-full text-sm whitespace-nowrap">
-        <thead className="sticky top-0 bg-slate-100 text-xs text-slate-600">
-          <tr>
+    <div className="rounded-lg border bg-card">
+      <Table className="tabular-nums">
+        <TableHeader className="bg-muted/60 text-xs">
+          <TableRow>
             {COLUMNS.map((col) => (
-              <th
+              <TableHead
                 key={col.label}
                 title={col.title}
                 aria-sort={sortState(col.sortKey, sort)}
-                className={`px-2.5 py-2 font-medium ${col.numeric ? 'text-right' : 'text-left'}`}
+                className={cn('h-9', col.numeric && 'text-right')}
               >
                 {col.sortKey ? (
                   <button
                     type="button"
                     onClick={() => toggleSort(col.sortKey!)}
-                    className="cursor-pointer hover:text-slate-900"
+                    className="cursor-pointer hover:text-foreground"
                   >
                     {col.label}
-                    <span className="ml-1 inline-block w-3 text-slate-400">
+                    <span className="ml-1 inline-block w-3 text-muted-foreground">
                       {sort.key === col.sortKey ? (sort.desc ? '▼' : '▲') : ''}
                     </span>
                   </button>
                 ) : (
                   col.label
                 )}
-              </th>
+              </TableHead>
             ))}
-          </tr>
-        </thead>
-        <tbody className="tabular-nums">
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {rows.map((c) => {
             const selected = c.code === selectedCode
             return (
-              <tr
+              <TableRow
                 key={c.code}
                 onClick={() => onSelect(c.code)}
                 aria-selected={selected}
-                className={`cursor-pointer border-t border-slate-100 ${
-                  selected ? 'bg-blue-50' : 'hover:bg-slate-50'
-                }`}
+                data-state={selected ? 'selected' : undefined}
+                className="cursor-pointer"
               >
-                <td className="px-2.5 py-1.5 font-mono">{formatCode(c.code)}</td>
-                <td className="max-w-48 truncate px-2.5 py-1.5">{c.name ?? '-'}</td>
-                <td className="px-2.5 py-1.5 text-right font-medium">{formatPrice(c.close)}</td>
-                <td className="px-2.5 py-1.5 text-right">{formatPrice(c.ma10)}</td>
-                <td className="px-2.5 py-1.5 text-right">{formatPrice(c.ma25)}</td>
-                <td className="px-2.5 py-1.5 text-right">{formatPrice(c.ma60)}</td>
-                <td className="px-2.5 py-1.5 text-right">{formatPrice(c.wma13)}</td>
-                <td className="px-2.5 py-1.5 text-right">{formatPrice(c.wma26)}</td>
-                <td className="px-2.5 py-1.5">{formatZone(c.range_zone)}</td>
-                <td className="px-2.5 py-1.5 text-right">{formatPct(c.atr_pct)}</td>
-                <td className="px-2.5 py-1.5 text-right">
+                <TableCell className="font-mono">{formatCode(c.code)}</TableCell>
+                <TableCell className="max-w-48 truncate">{c.name ?? '-'}</TableCell>
+                <TableCell className="text-right font-medium">{formatPrice(c.close)}</TableCell>
+                <TableCell className="text-right">{formatPrice(c.ma10)}</TableCell>
+                <TableCell className="text-right">{formatPrice(c.ma25)}</TableCell>
+                <TableCell className="text-right">{formatPrice(c.ma60)}</TableCell>
+                <TableCell className="text-right">{formatPrice(c.wma13)}</TableCell>
+                <TableCell className="text-right">{formatPrice(c.wma26)}</TableCell>
+                <TableCell>{formatZone(c.range_zone)}</TableCell>
+                <TableCell className="text-right">{formatPct(c.atr_pct)}</TableCell>
+                <TableCell className="text-right">
                   {c.turnover_below_days == null ? '-' : `${c.turnover_below_days}日`}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )
           })}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   )
 }
