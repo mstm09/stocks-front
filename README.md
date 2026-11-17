@@ -118,9 +118,14 @@ src/
 2. `src/routes.tsx` に、URLとの対応を1行足す。
 3. `src/components/Layout.tsx` の `NAV_ITEMS` に、メニューを1行足す。
 
+## 自動テスト（CircleCI）
+
+pushのたびに、CircleCIで `npm run lint`、`npm test`、`npm run build` が走る（`.circleci/config.yml`）。
+最初に一度だけ、CircleCIの画面で stocks-front をプロジェクトとして追加する（stock-analysis と同じ手順）。
+
 ## ブランチ運用
 
 stock-analysis と同じ（[ADR-0003](https://github.com/mstm09/stock-analysis/blob/develop/docs/adr/0003-git-hosting-and-branching.md)）。
 
-- `develop` から `feature/PY-<課題番号>_<名前>` を作り、PRで `develop` へマージする。
-- 課題は YouTrack の「株」プロジェクト（PY）で管理する。
+- `develop` から `feature/FE-<課題番号>_<名前>` を作り、PRで `develop` へマージする。
+- 課題は YouTrack の「stocks-front」プロジェクト（FE）で管理する。

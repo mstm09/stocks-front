@@ -1,0 +1,26 @@
+# CircleCI: pushのたびに、検査・テスト・ビルドを行う（全ブランチ）
+version: 2.1
+
+jobs:
+  test:
+    docker:
+      # lts = その時点の長期サポート版（22以上）。版を固定したくなったら cimg/node:22.12 のように書く
+      - image: cimg/node:lts
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - npm-{{ checksum "package-lock.json" }}
+      - run: npm ci
+      - save_cache:
+          key: npm-{{ checksum "package-lock.json" }}
+          paths:
+            - ~/.npm
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+workflows:
+  main:
+    jobs:
+      - test
