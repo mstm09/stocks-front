@@ -1,0 +1,42 @@
+# stocks-front を配る nginx の設定例（未検証。VPSで試して直す）。
+# 置き場所の例: /etc/nginx/sites-available/stocks-front → sites-enabled にリンクする。
+
+server {
+    # VPN（WireGuardなど）の中だけで待ち受けるなら、VPN側のアドレスを書く（例: listen 10.8.0.1:80;）
+    listen 80;
+    server_name _;
+
+    # `npm run build` で作った dist/ の中身を置いた場所
+    root /var/www/stocks-front;
+    index index.html;
+
+    # 画面のURL（/candidates、/stocks/86970 など）を直接開いたとき、
+    # その名前のファイルはないので、index.html を返す（画面の切り替えは、ブラウザの中で行う）。
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # ファイル名に中身の印（ハッシュ）が付くので、長く覚えさせてよい
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # index.html は覚えさせない（新しい版を配ったら、すぐに切り替わるように）
+    location = /index.html {
+        add_header Cache-Control "no-cache";
+    }
+
+    # 画面からの /api/... を、同じサーバーで動く stock-analysis のAPIへ中継する。
+    # 末尾の / が大事: /api/candidates → http://127.0.0.1:8000/candidates（/api を外す）
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000/;
+        proxy_set_header Host $host;
+        proxy_read_timeout 60s;
+
+        # stock-analysis 側で API_TOKEN を設定している場合は、ここでトークンを付ける。
+        # 画面のファイルには埋め込まない（ブラウザから見えてしまうため）。
+        # このファイルにトークンを書くので、権限を絞る（chmod 640、所有者 root）。
+        # proxy_set_header Authorization "Bearer （API_TOKEN と同じ値）";
+    }
+}
