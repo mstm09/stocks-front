@@ -14,11 +14,20 @@ export function renderApp(path = '/') {
   )
 }
 
-/** テスト用。APIの代わりに、決めた値を返す fetch を作る。 */
-export function mockFetch(handler: (url: URL) => Response | undefined) {
+/** 画面がAPIへ送った内容（テストで確かめる用）。 */
+export type SentRequest = { method: string; path: string; body: unknown }
+
+/**
+ * テスト用。APIの代わりに、決めた値を返す fetch を作る。
+ * handler の2つ目の引数で、メソッド（GET / POST …）と、送られた中身（body）を見られる。
+ */
+export function mockFetch(handler: (url: URL, request: SentRequest) => Response | undefined) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-    const raw = input instanceof Request ? input.url : String(input)
-    const res = handler(new URL(raw, 'http://localhost'))
+    const request = input instanceof Request ? input : new Request(String(input))
+    const url = new URL(request.url, 'http://localhost')
+    const text = await request.clone().text()
+    const sent = { method: request.method, path: url.pathname, body: text ? JSON.parse(text) : null }
+    const res = handler(url, sent)
     return res ?? new Response(JSON.stringify({ detail: 'not found' }), { status: 404 })
   })
 }

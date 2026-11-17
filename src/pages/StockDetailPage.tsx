@@ -1,7 +1,8 @@
-import { useParams } from 'react-router'
+import { Link, useParams } from 'react-router'
 import { AsOfPicker } from '@/components/AsOfPicker'
 import { ErrorMessage, Loading } from '@/components/Status'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { useIndicators } from '@/features/stocks/api'
 import { ConditionList } from '@/features/stocks/ConditionList'
 import { StockChart } from '@/features/stocks/StockChart'
@@ -34,8 +35,12 @@ export function StockDetailPage() {
             <p className="text-sm text-muted-foreground">{stock.as_of_date} 時点</p>
           </>
         )}
-        <div className="ml-auto">
+        <div className="ml-auto flex flex-wrap items-center gap-4">
           <AsOfPicker value={asOf} onChange={(v) => url.set('as_of', v)} />
+          {/* asChild: Button の見た目を、中の Link（画面を移るリンク）に付ける */}
+          <Button asChild variant="outline">
+            <Link to={`/trades?new=${code}`}>この銘柄の売買を登録</Link>
+          </Button>
         </div>
       </div>
 

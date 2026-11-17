@@ -57,6 +57,12 @@ function errorMessage(error: unknown, status: number): string {
   if (typeof error === 'object' && error !== null && 'detail' in error) {
     const detail = (error as { detail: unknown }).detail
     if (typeof detail === 'string') return detail
+    // 入力の形がおかしいとき（422）は、[{ loc: ['body', 'quantity'], msg: '...' }] の形
+    if (Array.isArray(detail)) {
+      return detail
+        .map((d: { loc?: unknown[]; msg?: string }) => `${d.loc?.at(-1) ?? ''}: ${d.msg ?? ''}`)
+        .join(' / ')
+    }
   }
   if (status === 401) return '認証が必要です（API_TOKEN を確認してください）'
   return `APIがエラーを返しました（${status}）`

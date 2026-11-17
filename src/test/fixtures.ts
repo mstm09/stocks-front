@@ -35,3 +35,34 @@ export function svgResponse() {
     headers: { 'Content-Type': 'image/svg+xml' },
   })
 }
+
+type Trade = import('@/features/trades/api').Trade
+
+/** テスト用の売買（信用売り・保有中）。変えたい項目だけ渡す。 */
+export function trade(over: Partial<Trade> = {}): Trade {
+  return {
+    id: 1,
+    code: '86970',
+    name: '日本取引所グループ',
+    kind: 'MARGIN_SHORT',
+    kind_label: '信用売り',
+    opened_on: '2026-08-03',
+    quantity: 300,
+    entry_price: 1000,
+    entry_fee: 0,
+    stop_loss_price: 1060,
+    stop_loss_reason: '直近の戻り高値の上',
+    limit_price: 900,
+    memo: '60日線で頭を押さえられた',
+    self_score: null,
+    self_review: null,
+    status: 'OPEN',
+    remaining_quantity: 300,
+    closed_on: null,
+    realized_pnl: 0,
+    risk_amount: 18000,
+    r_multiple: null,
+    exits: [],
+    ...over,
+  }
+}

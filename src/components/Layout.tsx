@@ -7,6 +7,8 @@ const NAV_ITEMS = [
   { to: '/', label: 'ホーム' },
   { to: '/candidates', label: '売り建て候補' },
   { to: '/market', label: '市場' },
+  { to: '/trades', label: '売買記録' },
+  { to: '/portfolio', label: '口座' },
 ]
 
 /** 全画面で共通の枠（上のメニュー）。<Outlet /> の位置に、URLに合った画面が入る。 */
