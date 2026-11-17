@@ -40,11 +40,18 @@ export function CandidatesPage() {
             selectedCode={code}
             onSelect={(c) => url.set('code', c)}
           />
-          {selected ? (
-            <StockPanel stock={selected} linkToDetail />
-          ) : (
-            <Empty>行を選ぶと、チャートと条件の判定を表示します。</Empty>
-          )}
+          {/*
+            右側は、表をスクロールしても画面の上に固定する（sticky）。
+            top-16 は、上のメニュー（高さ3rem、これも固定）の下に少し余白をあけた位置。
+            中身が画面より高いときは、右側だけでスクロールできるようにする。
+          */}
+          <div className="xl:sticky xl:top-16 xl:max-h-[calc(100vh-5rem)] xl:overflow-y-auto">
+            {selected ? (
+              <StockPanel stock={selected} linkToDetail />
+            ) : (
+              <Empty>行を選ぶと、チャートと条件の判定を表示します。</Empty>
+            )}
+          </div>
         </div>
       )}
     </div>
