@@ -1,8 +1,8 @@
 // 売買記録の仮のデータ。登録や決済は、開発サーバーを動かしている間だけ覚えている（再起動で元に戻る）。
 // 計算の決まりは、stock-analysis の docs/trades.md と同じ。
 
-import type { components } from '../src/api/schema'
-import { findStock, LATEST_DATE } from './data'
+import type { components } from '../src/api/schema.d.ts'
+import { findStock, LATEST_DATE } from './data.ts'
 
 type Schemas = components['schemas']
 type TradeOut = Schemas['TradeOut']
