@@ -60,6 +60,8 @@ test('ATRは円で出し、見出しで並べ替えられる', async () => {
   const toyota = screen.getByText('トヨタ自動車').closest('tr')!
   expect(within(toyota).getByText('86.8')).toBeInTheDocument()
   expect(within(toyota).queryByText('3.1%')).not.toBeInTheDocument()
+  // 売買代金が基準以下だった日数は、表には出さない（右の詳細の条件Fに出す）
+  expect(screen.queryByRole('columnheader', { name: /代金/ })).not.toBeInTheDocument()
 
   await userEvent.click(screen.getByRole('button', { name: /ATR/ }))
   expect(codesInTable()[0]).not.toBe('7203') // 小さい順。トヨタ（86.8円）は最後

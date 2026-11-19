@@ -11,7 +11,7 @@ import {
 import type { Indicators } from '@/features/stocks/api'
 import { cn } from '@/lib/utils'
 
-type SortKey = 'code' | 'close' | 'atr' | 'turnover_below_days'
+type SortKey = 'code' | 'close' | 'atr'
 type Sort = { key: SortKey; desc: boolean }
 
 /** 表の列。並べ替えできる列には sortKey を付ける。 */
@@ -26,12 +26,6 @@ const COLUMNS: { label: string; title?: string; sortKey?: SortKey; numeric?: boo
   { label: '26週', title: '週足26週の移動平均', numeric: true },
   { label: '価格帯', title: '直近の高値〜安値を3等分したときの、現在の位置' },
   { label: 'ATR', title: '1日の値幅の平均（円）', sortKey: 'atr', numeric: true },
-  {
-    label: '代金不足',
-    title: '過去2年で、売買代金が基準以下だった日数',
-    sortKey: 'turnover_below_days',
-    numeric: true,
-  },
 ]
 
 type Props = {
@@ -103,9 +97,6 @@ export function CandidateTable({ candidates, selectedCode, onSelect }: Props) {
                 <TableCell className="text-right">{formatPrice(c.wma26)}</TableCell>
                 <TableCell>{formatZone(c.range_zone)}</TableCell>
                 <TableCell className="text-right">{formatPrice(c.atr)}</TableCell>
-                <TableCell className="text-right">
-                  {c.turnover_below_days == null ? '-' : `${c.turnover_below_days}日`}
-                </TableCell>
               </TableRow>
             )
           })}
