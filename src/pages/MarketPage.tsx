@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import {
   type MarketFilter,
   type Period,
+  type SectorKind,
   useBreadth,
   useMarkets,
   useSectorRanking,
@@ -20,12 +21,19 @@ const PERIODS: { value: Period; label: string; compare: string }[] = [
   { value: 'month', label: '月', compare: '前月末比' },
 ]
 
+const SECTOR_KINDS: { value: SectorKind; label: string }[] = [
+  { value: '17', label: '17業種' },
+  { value: '33', label: '33業種' },
+]
+
 /** 騰落の表に出す期間の数 */
 const BREADTH_COUNT = 10
 
 /**
  * 市場全体の動き（/market?period=week&market=プライム&as_of=2026-08-14）。
- * 騰落（値上がり・値下がりの銘柄数）と、33業種の上昇率ランキングを出す。
+ * 騰落（値上がり・値下がりの銘柄数）と、業種別の上昇率ランキングを出す。
+ * 業種は17業種（TOPIX-17）が既定。33業種は所属銘柄が極端に少ない業種があり、順位が振れやすい。
+ * 33業種を選ぶと、URLに kind=33 が付く。
  */
 export function MarketPage() {
   const url = useUrlParams()
@@ -38,7 +46,8 @@ export function MarketPage() {
 
   const markets = useMarkets()
   const breadth = useBreadth(filter, BREADTH_COUNT)
-  const sectors = useSectorRanking(filter)
+  const kind = SECTOR_KINDS.find((k) => k.value === url.get('kind')) ?? SECTOR_KINDS[0]
+  const sectors = useSectorRanking(filter, kind.value)
 
   return (
     <div className="space-y-6">
@@ -105,14 +114,29 @@ export function MarketPage() {
       </section>
 
       <section aria-labelledby="sectors-heading" className="space-y-2">
-        <h2 id="sectors-heading" className="font-semibold">
-          33業種の上昇率ランキング
-          {sectors.data?.base_date && (
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
-              {sectors.data.base_date} → {sectors.data.end_date}
-            </span>
-          )}
-        </h2>
+        <div className="flex flex-wrap items-end gap-4">
+          <h2 id="sectors-heading" className="font-semibold">
+            業種別の上昇率ランキング（{kind.label}）
+            {sectors.data?.base_date && (
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                {sectors.data.base_date} → {sectors.data.end_date}
+              </span>
+            )}
+          </h2>
+          <div role="group" aria-label="業種の区分" className="ml-auto flex gap-1">
+            {SECTOR_KINDS.map((k) => (
+              <Button
+                key={k.value}
+                size="sm"
+                variant={k.value === kind.value ? 'default' : 'outline'}
+                aria-pressed={k.value === kind.value}
+                onClick={() => url.set('kind', k.value === '17' ? undefined : k.value)}
+              >
+                {k.label}
+              </Button>
+            ))}
+          </div>
+        </div>
         {sectors.isPending && <Loading />}
         {sectors.error && <ErrorMessage error={sectors.error} />}
         {sectors.data &&
@@ -121,6 +145,7 @@ export function MarketPage() {
               <SectorTable sectors={sectors.data.sectors} />
               <p className="text-xs text-muted-foreground">
                 上昇率は所属銘柄の単純平均で、東証の業種別株価指数（時価総額で重み付け）とは一致しません。
+                銘柄数が少ない業種は、数銘柄の値動きで大きく振れます。
               </p>
             </>
           ) : (

@@ -150,7 +150,7 @@ export interface paths {
         };
         /**
          * Sectors
-         * @description 33業種の上昇率ランキング（所属銘柄の騰落率の単純平均。上昇率の高い順）。
+         * @description 業種別の上昇率ランキング（所属銘柄の騰落率の単純平均。上昇率の高い順）。
          */
         get: operations["sectors_market_sectors_get"];
         put?: never;
@@ -706,11 +706,11 @@ export interface components {
              */
             rank: number;
             /**
-             * Sector33
-             * @description 33業種の名前
-             * @example 電気機器
+             * Sector
+             * @description 業種の名前（17業種か33業種）
+             * @example 電機・精密
              */
-            sector33: string;
+            sector: string;
             /**
              * Change Pct
              * @description 所属銘柄の騰落率の単純平均（%）
@@ -744,11 +744,16 @@ export interface components {
         };
         /**
          * SectorRanking
-         * @description 33業種の上昇率ランキング。上昇率は単純平均で、東証の業種別株価指数とは一致しない。
+         * @description 業種別の上昇率ランキング。上昇率は単純平均で、東証の業種別株価指数とは一致しない。
          */
         SectorRanking: {
             /** Period */
             period: string;
+            /**
+             * Kind
+             * @description 業種の区分。17（TOPIX-17）か 33
+             */
+            kind: string;
             /**
              * As Of Date
              * Format: date
@@ -808,6 +813,11 @@ export interface components {
              * @description 33業種の名前
              */
             sector33?: string | null;
+            /**
+             * Sector17
+             * @description 17業種（TOPIX-17）の名前
+             */
+            sector17?: string | null;
             /**
              * Is Active
              * @description 上場中か（上場廃止後も残る）
@@ -1216,6 +1226,8 @@ export interface operations {
                 as_of?: string | null;
                 /** @description 市場区分名で絞る（例: プライム）。省略時は全銘柄 */
                 market?: string | null;
+                /** @description 業種の区分。17（TOPIX-17。既定）か 33（所属銘柄が少ない業種がある） */
+                kind?: "17" | "33";
             };
             header?: never;
             path?: never;
