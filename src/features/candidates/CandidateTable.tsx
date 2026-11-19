@@ -54,7 +54,7 @@ export function CandidateTable({ candidates, selectedCode, onSelect }: Props) {
 
   return (
     <div className="rounded-lg border bg-card">
-      <Table className="tabular-nums">
+      <Table className="tabular-nums [&_td]:px-1.5 [&_th]:px-1.5">
         <TableHeader className="bg-muted/60 text-xs">
           <TableRow>
             {COLUMNS.map((col) => (
@@ -94,7 +94,7 @@ export function CandidateTable({ candidates, selectedCode, onSelect }: Props) {
                 className="cursor-pointer"
               >
                 <TableCell className="font-mono">{formatCode(c.code)}</TableCell>
-                <TableCell className="max-w-48 truncate">{c.name ?? '-'}</TableCell>
+                <TableCell className="max-w-40 truncate">{c.name ?? '-'}</TableCell>
                 <TableCell className="text-right font-medium">{formatPrice(c.close)}</TableCell>
                 <TableCell className="text-right">{formatPrice(c.ma10)}</TableCell>
                 <TableCell className="text-right">{formatPrice(c.ma25)}</TableCell>
