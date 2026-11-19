@@ -6,7 +6,7 @@ import { json, mockFetch, renderApp } from '@/test/render'
 
 const two = [
   indicators(),
-  indicators({ code: '72030', name: 'トヨタ自動車', close: 2800, atr_pct: 3.1 }),
+  indicators({ code: '72030', name: 'トヨタ自動車', close: 2800, atr: 86.8, atr_pct: 3.1 }),
 ]
 
 function mockApi(candidates: Indicators[]) {
@@ -50,6 +50,20 @@ test('見出しを押すと、並べ替える', async () => {
 
   await userEvent.click(screen.getByRole('button', { name: /終値/ }))
   expect(codesInTable()).toEqual(['7203', '8697']) // 高い順
+})
+
+test('ATRは円で出し、見出しで並べ替えられる', async () => {
+  mockApi(two)
+  renderApp('/candidates')
+  await screen.findByText('日本取引所グループ')
+
+  const toyota = screen.getByText('トヨタ自動車').closest('tr')!
+  expect(within(toyota).getByText('86.8')).toBeInTheDocument()
+  expect(within(toyota).queryByText('3.1%')).not.toBeInTheDocument()
+
+  await userEvent.click(screen.getByRole('button', { name: /ATR/ }))
+  expect(codesInTable()[0]).not.toBe('7203') // 小さい順。トヨタ（86.8円）は最後
+  expect(codesInTable().at(-1)).toBe('7203')
 })
 
 test('行を選ぶと、チャートと条件の判定を出す', async () => {
