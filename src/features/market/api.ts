@@ -5,6 +5,8 @@ import { api, unwrap } from '@/lib/api'
 export type Period = 'day' | 'week' | 'month'
 export type BreadthItem = components['schemas']['BreadthItem']
 export type SectorRankItem = components['schemas']['SectorRankItem']
+/** 業種の区分。17 = TOPIX-17、33 = 33業種 */
+export type SectorKind = '17' | '33'
 
 /** 画面で選んだ条件。どのAPIにも同じものを渡す。 */
 export type MarketFilter = {
@@ -30,14 +32,16 @@ export function useBreadth(filter: MarketFilter, count: number) {
   })
 }
 
-/** 33業種の上昇率ランキング（GET /market/sectors）。 */
-export function useSectorRanking(filter: MarketFilter) {
+/** 業種別の上昇率ランキング（GET /market/sectors）。kind は 17業種か33業種。 */
+export function useSectorRanking(filter: MarketFilter, kind: SectorKind) {
   return useQuery({
-    queryKey: ['market', 'sectors', filter],
+    queryKey: ['market', 'sectors', filter, kind],
     queryFn: async () =>
       unwrap(
         await api.GET('/market/sectors', {
-          params: { query: { period: filter.period, as_of: filter.asOf, market: filter.market } },
+          params: {
+            query: { period: filter.period, as_of: filter.asOf, market: filter.market, kind },
+          },
         }),
       ),
   })

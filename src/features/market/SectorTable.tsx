@@ -10,7 +10,7 @@ import { changeColor, formatChange } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { SectorRankItem } from './api'
 
-/** 33業種の上昇率ランキング。上昇率の高い順。 */
+/** 業種別（17業種か33業種）の上昇率ランキング。上昇率の高い順。 */
 export function SectorTable({ sectors }: { sectors: SectorRankItem[] }) {
   // 棒の長さは、いちばん大きく動いた業種を100%にする
   const max = Math.max(...sectors.map((s) => Math.abs(s.change_pct)), 0.01)
@@ -39,9 +39,9 @@ export function SectorTable({ sectors }: { sectors: SectorRankItem[] }) {
         </TableHeader>
         <TableBody>
           {sectors.map((s) => (
-            <TableRow key={s.sector33}>
+            <TableRow key={s.sector}>
               <TableCell className="text-right text-muted-foreground">{s.rank}</TableCell>
-              <TableCell>{s.sector33}</TableCell>
+              <TableCell>{s.sector}</TableCell>
               <TableCell className={cn('text-right font-medium', changeColor(s.change_pct))}>
                 {formatChange(s.change_pct)}
               </TableCell>

@@ -3,7 +3,7 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Plugin } from 'vite'
-import { chartSvg, findStock, indicatorsOf, LATEST_DATE, STOCKS } from './data.ts'
+import { chartSvg, findStock, indicatorsOf, LATEST_DATE, SECTOR17, STOCKS } from './data.ts'
 import { breadth, sectors } from './market.ts'
 import * as trades from './trades.ts'
 
@@ -40,7 +40,8 @@ async function handle(req: IncomingMessage, url: URL): Promise<Result> {
     const hits = STOCKS.filter((s) => q && (s.code.startsWith(q) || s.name.includes(q)))
     return {
       body: hits.slice(0, Number(query.get('limit') ?? 20)).map((s) => ({
-        code: s.code, name: s.name, market_name: s.market, sector33: s.sector, is_active: true,
+        code: s.code, name: s.name, market_name: s.market, sector33: s.sector,
+        sector17: SECTOR17[s.sector] ?? null, is_active: true,
       })),
     }
   }
@@ -60,7 +61,10 @@ async function handle(req: IncomingMessage, url: URL): Promise<Result> {
   if (path === '/market/breadth') {
     return { body: breadth(period, asOf, Number(query.get('count') ?? 1), market) }
   }
-  if (path === '/market/sectors') return { body: sectors(period, asOf, market) }
+  if (path === '/market/sectors') {
+    const kind = query.get('kind') === '33' ? '33' : '17'
+    return { body: sectors(period, asOf, market, kind) }
+  }
 
   if (path === '/trades' && method === 'GET') return { body: trades.listTrades(query.get('status')) }
   if (path === '/trades' && method === 'POST') {

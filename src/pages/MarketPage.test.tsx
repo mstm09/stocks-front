@@ -35,8 +35,8 @@ function mockApi() {
         end_date: '2026-08-14',
         base_date: '2026-08-13',
         sectors: [
-          { rank: 1, sector33: '海運業', change_pct: 1.254, median_pct: 0.9, up: 8, down: 2, unchanged: 0, total: 10 },
-          { rank: 2, sector33: '銀行業', change_pct: -0.8, median_pct: -0.5, up: 20, down: 60, unchanged: 2, total: 82 },
+          { rank: 1, sector: '海運業', change_pct: 1.254, median_pct: 0.9, up: 8, down: 2, unchanged: 0, total: 10 },
+          { rank: 2, sector: '銀行業', change_pct: -0.8, median_pct: -0.5, up: 20, down: 60, unchanged: 2, total: 82 },
         ],
       })
     }
@@ -60,7 +60,7 @@ test('騰落と業種ランキングを出す', async () => {
   // 値下がりが0の期間は、比率を出さない
   expect(within(breadth.getAllByRole('row')[2]).getByText('-')).toBeInTheDocument()
 
-  const sectors = within(section(/33業種/))
+  const sectors = within(section(/業種別/))
   expect(await sectors.findByText('海運業')).toBeInTheDocument()
   expect(sectors.getByText('+1.25%')).toHaveClass('text-up')
   expect(sectors.getByText('-0.80%')).toHaveClass('text-down')
@@ -83,6 +83,24 @@ test('期間と市場区分を変えると、その条件でAPIを呼ぶ', async
     .at(-1)
   expect(last?.searchParams.get('period')).toBe('week')
   expect(last?.searchParams.get('market')).toBe('プライム')
+})
+
+test('業種は17業種が既定で、33業種に切り替えられる', async () => {
+  const fetchMock = mockApi()
+  renderApp('/market')
+  await screen.findByText('海運業')
+
+  const sectorCalls = () =>
+    fetchMock.mock.calls
+      .map((c) => new URL((c[0] as Request).url))
+      .filter((u) => u.pathname === '/api/market/sectors')
+  expect(screen.getByText(/業種別の上昇率ランキング（17業種）/)).toBeInTheDocument()
+  expect(sectorCalls().at(-1)?.searchParams.get('kind')).toBe('17')
+
+  await userEvent.click(screen.getByRole('button', { name: '33業種' }))
+  expect(await screen.findByText(/業種別の上昇率ランキング（33業種）/)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '33業種' })).toHaveAttribute('aria-pressed', 'true')
+  expect(sectorCalls().at(-1)?.searchParams.get('kind')).toBe('33')
 })
 
 test('日足がないときは、APIの文言を出す', async () => {
