@@ -29,7 +29,7 @@ const COLUMNS: { label: string; title?: string; sortKey?: SortKey; numeric?: boo
   { label: 'ATR', title: '1日の値幅の平均（円）', sortKey: 'atr', numeric: true },
   {
     label: '株数',
-    title: '1回の損失を口座の3%に収めて建てられる株数（2ATRで計算、100株単位）',
+    title: '1回の損失を基準額の3%に収めて建てられる株数（2ATRで計算、100株単位）',
     sortKey: 'max_shares',
     numeric: true,
   },
@@ -45,7 +45,7 @@ type Props = {
 
 /**
  * 売り建て候補の表。見出しを押すと並べ替え、行を押すと選択する。
- * 建てられる株数が0の行（口座の3%ルールでは建てられない）は、背景を薄いグレーにする。
+ * 建てられる株数が0の行（基準額の3%ルールでは建てられない）は、背景を薄いグレーにする。
  * グレーの行も、選んでチャートを見ることはできる。
  */
 export function CandidateTable({ candidates, selectedCode, onSelect, onOrder }: Props) {
@@ -103,7 +103,7 @@ export function CandidateTable({ candidates, selectedCode, onSelect, onOrder }: 
                 aria-selected={selected}
                 data-state={selected ? 'selected' : undefined}
                 data-cannot-open={cannotOpen || undefined}
-                title={cannotOpen ? '口座の3%ルールでは建てられません（2ATRで100株未満）' : undefined}
+                title={cannotOpen ? '基準額の3%ルールでは建てられません（2ATRで100株未満）' : undefined}
                 className={cn(
                   'cursor-pointer',
                   cannotOpen &&

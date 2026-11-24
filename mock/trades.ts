@@ -254,3 +254,35 @@ export function portfolio(asOf: string | null): Schemas['PortfolioOut'] {
     unpriced_codes: positions.filter((p) => p.price == null).map((p) => p.trade.code),
   }
 }
+
+type StatsRow = Schemas['StatsRowOut']
+
+function summarize(list: TradeOut[], year: number | null): StatsRow {
+  const pnls = list.map((t) => t.realized_pnl)
+  const wins = pnls.filter((p) => p > 0)
+  const losses = pnls.filter((p) => p < 0)
+  const scores = list.map((t) => t.self_score).filter((s): s is number => s != null)
+  const dates = list.map((t) => t.closed_on!).sort()
+  const avg = (v: number[]) => (v.length ? Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 100) / 100 : null)
+  const decided = wins.length + losses.length
+  return {
+    year, first_date: dates[0] ?? null, last_date: dates.at(-1) ?? null, trades: list.length,
+    wins: wins.length, losses: losses.length, evens: list.length - decided,
+    win_rate: decided ? Math.round((wins.length / decided) * 1000) / 10 : null,
+    realized_pnl: pnls.reduce((a, b) => a + b, 0), avg_win: avg(wins), avg_loss: avg(losses),
+    max_win: wins.length ? Math.max(...wins) : null, max_loss: losses.length ? Math.min(...losses) : null,
+    avg_score: avg(scores), scored: scores.length,
+  }
+}
+
+/** 成績。すべて決済した売買を、最後に決済した日の年で集計する（本物は stock-analysis の trades/stats.py）。 */
+export function stats(): Schemas['StatsOut'] {
+  const all = trades.map(toOut)
+  const closed = all.filter((t) => t.status === 'CLOSED')
+  const years = [...new Set(closed.map((t) => Number(t.closed_on!.slice(0, 4))))].sort((a, b) => b - a)
+  return {
+    total: summarize(closed, null),
+    years: years.map((y) => summarize(closed.filter((t) => t.closed_on!.startsWith(String(y))), y)),
+    open_trades: all.length - closed.length,
+  }
+}

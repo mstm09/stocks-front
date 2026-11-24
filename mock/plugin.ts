@@ -125,6 +125,7 @@ async function handle(req: IncomingMessage, url: URL): Promise<Result> {
     return (trades.deleteCash(Number(m[1])), { status: 204 })
   }
   if (path === '/portfolio') return { body: trades.portfolio(query.get('as_of')) }
+  if (path === '/stats') return { body: trades.stats() }
 
   return notFound(`仮のAPIに ${method} ${path} がありません`)
 }

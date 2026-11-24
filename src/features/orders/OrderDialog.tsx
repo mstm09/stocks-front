@@ -32,7 +32,7 @@ type Props = {
  *
  * - 注文価格の初期値は、基準日の終値。
  * - 売り建てなら、ロスカットの候補（1ATR・1.5ATR・2ATR付近の陰線の高値）を出す。押すとロスカット欄に入る。
- * - 株数の横に、口座の3%ルールで建てられる最大の株数を出す。
+ * - 株数の横に、基準額の3%ルールで建てられる最大の株数を出す。
  *   ロスカットを入れたら「注文価格とロスカットの差」、入れていなければ「2ATR」で計算する。
  */
 export function OrderDialog({ stock, sizing, asOf, onClose, onAdded }: Props) {
@@ -159,7 +159,7 @@ export function OrderDialog({ stock, sizing, asOf, onClose, onAdded }: Props) {
             {max == null
               ? 'ATRがないため、建てられる株数は計算できません'
               : max === 0
-                ? '口座の3%ルールでは建てられません（0株）'
+                ? '基準額の3%ルールでは建てられません（0株）'
                 : `最大 ${formatShares(max)}株（許容損失 ${formatYen(sizing.risk_amount)}円 ÷ ${
                     byStop ? 'ロスカットまで' : `${sizing.atr_multiple}ATR`
                   } ${formatPrice(lossPerShare)}円）`}

@@ -42,13 +42,13 @@ export function useStopCandidates(code: string, entryPrice: number | null, asOf:
 }
 
 // ---- 書く（useMutation）
-// 書いたあとは、注文・売買・口座全体の「覚えている値」を古いものとして扱い、取り直させる。
+// 書いたあとは、注文・売買・成績の「覚えている値」を古いものとして扱い、取り直させる。
 
 function useRefresh() {
   const queryClient = useQueryClient()
   return () =>
     Promise.all(
-      [['orders'], ['trades'], ['portfolio']].map((queryKey) =>
+      [['orders'], ['trades'], ['portfolio'], ['stats']].map((queryKey) =>
         queryClient.invalidateQueries({ queryKey }),
       ),
     )

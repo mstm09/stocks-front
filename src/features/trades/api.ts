@@ -13,6 +13,8 @@ export type StopChangeIn = Schemas['StopChangeIn']
 export type Cash = Schemas['CashOut']
 export type CashIn = Schemas['CashIn']
 export type Position = Schemas['PositionOut']
+export type Stats = Schemas['StatsOut']
+export type StatsRow = Schemas['StatsRowOut']
 export type TradeKind = TradeIn['kind']
 export type TradeStatus = 'OPEN' | 'CLOSED'
 
@@ -49,7 +51,15 @@ export function useCash() {
   })
 }
 
-/** 口座全体（GET /portfolio）。 */
+/** 売買の成績（GET /stats）。システム開始からの累計と、年ごと。 */
+export function useStats() {
+  return useQuery({
+    queryKey: ['stats'],
+    queryFn: async () => unwrap(await api.GET('/stats')),
+  })
+}
+
+/** 口座全体（GET /portfolio）。成績の画面では、保有中の評価だけを使う。 */
 export function usePortfolio(asOf: string | undefined) {
   return useQuery({
     queryKey: ['portfolio', asOf ?? 'today'],
@@ -64,7 +74,7 @@ function useRefresh() {
   const queryClient = useQueryClient()
   return () =>
     Promise.all(
-      [['trades'], ['portfolio'], ['cash']].map((queryKey) =>
+      [['trades'], ['portfolio'], ['cash'], ['stats']].map((queryKey) =>
         queryClient.invalidateQueries({ queryKey }),
       ),
     )
