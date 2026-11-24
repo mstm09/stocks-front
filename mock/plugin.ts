@@ -35,10 +35,11 @@ async function handle(req: IncomingMessage, url: URL): Promise<Result> {
     // 建てられる株数: 基準額（省略時100万円）× 3% ÷ 2ATR を100株単位で切り捨て（本物は settings の sizing）
     const capital = Number(query.get('capital') ?? 1_000_000)
     const sizing = { capital, risk_pct: 3, risk_amount: capital * 0.03, atr_multiple: 2, lot_size: 100 }
-    const candidates = STOCKS.map((s) => indicatorsOf(s, asOf))
-      .filter((i) => i?.is_short_candidate)
-      .map((i) => ({
+    const candidates = STOCKS.map((s) => ({ s, i: indicatorsOf(s, asOf) }))
+      .filter(({ i }) => i?.is_short_candidate)
+      .map(({ s, i }) => ({
         ...i!,
+        ...streakOf(s, asOf),
         max_shares: maxShares(sizing.risk_amount, i!.atr == null ? null : i!.atr * 2, 100),
       }))
     return { body: { as_of_date: asOf, count: candidates.length, sizing, candidates } }
@@ -160,4 +161,22 @@ export function mockApi(): Plugin {
       })
     },
   }
+}
+
+/**
+ * 継続日数（何営業日続けて候補か）。本物は indicator_cache の履歴から数える。
+ * 仮のデータでは、日足から判定し直しながら、最大60営業日さかのぼる。
+ */
+function streakOf(stock: (typeof STOCKS)[number], asOf: string) {
+  const dates = stock.bars.map((b) => b.date).filter((d) => d <= asOf).reverse()
+  let days = 0
+  let since: string | null = null
+  for (const date of dates.slice(0, 60)) {
+    const i = indicatorsOf(stock, date)
+    if (!i) return { streak_days: days, streak_since: since, streak_at_least: true } // 判定できない日
+    if (!i.is_short_candidate) return { streak_days: days, streak_since: since, streak_at_least: false }
+    days += 1
+    since = date
+  }
+  return { streak_days: days, streak_since: since, streak_at_least: true }
 }

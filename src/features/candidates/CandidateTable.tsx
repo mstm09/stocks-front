@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { formatCode, formatPrice, formatShares, formatZone } from '@/lib/format'
 import {
@@ -12,13 +13,19 @@ import {
 import type { Indicators } from '@/features/stocks/api'
 import { cn } from '@/lib/utils'
 
-type SortKey = 'code' | 'close' | 'atr' | 'max_shares'
+type SortKey = 'code' | 'close' | 'atr' | 'max_shares' | 'streak_days'
 type Sort = { key: SortKey; desc: boolean }
 
 /** 表の列。並べ替えできる列には sortKey を付ける。 */
 const COLUMNS: { label: string; title?: string; sortKey?: SortKey; numeric?: boolean }[] = [
   { label: 'コード', sortKey: 'code' },
   { label: '銘柄名' },
+  {
+    label: '継続',
+    title: '基準日まで、何営業日続けて売り建て候補か。「以上」は判定の履歴の始まりまで続いている',
+    sortKey: 'streak_days',
+    numeric: true,
+  },
   { label: '終値', title: '基準日の調整後終値', sortKey: 'close', numeric: true },
   { label: '価格帯', title: '直近の高値〜安値を3等分したときの、現在の位置' },
   { label: 'ATR', title: '1日の値幅の平均（円）', sortKey: 'atr', numeric: true },
@@ -107,6 +114,9 @@ export function CandidateTable({ candidates, selectedCode, onSelect, onOrder }: 
               >
                 <TableCell className="font-mono">{formatCode(c.code)}</TableCell>
                 <TableCell className="max-w-40 truncate">{c.name ?? '-'}</TableCell>
+                <TableCell className="text-right whitespace-nowrap">
+                  <Streak stock={c} />
+                </TableCell>
                 <TableCell className="text-right font-medium">{formatPrice(c.close)}</TableCell>
                 <TableCell>{formatZone(c.range_zone)}</TableCell>
                 <TableCell className="text-right">{formatPrice(c.atr)}</TableCell>
@@ -140,6 +150,22 @@ function sortState(key: SortKey | undefined, sort: Sort) {
 }
 
 /** 並べ替えた新しい配列を返す（元の配列は変えない）。値がない行は最後に回す。 */
+/**
+ * 継続日数。「5日」「12日以上」。初日の銘柄には「新規」の印。
+ * 開始日は、マウスを乗せると出す。
+ */
+function Streak({ stock }: { stock: Indicators }) {
+  const days = stock.streak_days
+  if (days == null) return <span className="text-muted-foreground">-</span>
+  const isNew = days === 1 && !stock.streak_at_least
+  return (
+    <span title={stock.streak_since ? `${stock.streak_since} から` : undefined}>
+      {isNew && <Badge className="mr-1 px-1.5 py-0 text-[10px]">新規</Badge>}
+      {days}日{stock.streak_at_least && <span className="text-xs text-muted-foreground">以上</span>}
+    </span>
+  )
+}
+
 function sortCandidates(candidates: Indicators[], sort: Sort): Indicators[] {
   return [...candidates].sort((a, b) => {
     const x = a[sort.key]

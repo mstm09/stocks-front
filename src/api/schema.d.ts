@@ -557,7 +557,7 @@ export interface components {
             total: number;
             /**
              * Ratio
-             * @description 値上がり ÷ 値下がり × 100。値下がりが0のときは null
+             * @description 値上がり ÷ 値下がり（小数2桁）。1で均衡、1より大きいと値上がりが多い。値下がりが0のときは null
              */
             ratio?: number | null;
         };
@@ -704,6 +704,21 @@ export interface components {
              */
             name?: string | null;
             /**
+             * Sector17
+             * @description 17業種（TOPIX-17）
+             */
+            sector17?: string | null;
+            /**
+             * Sector33
+             * @description 33業種
+             */
+            sector33?: string | null;
+            /**
+             * Market Name
+             * @description 市場区分（プライム等）
+             */
+            market_name?: string | null;
+            /**
              * As Of Date
              * Format: date
              * @description 計算の基準日
@@ -804,6 +819,21 @@ export interface components {
              * @description ATR ÷ 基準日の終値（%）
              */
             atr_pct?: number | null;
+            /**
+             * Streak Days
+             * @description 基準日まで、何営業日続けて売り建て候補か（基準日を含む）。候補一覧だけで付く
+             */
+            streak_days?: number | null;
+            /**
+             * Streak Since
+             * @description 候補になった日（続いている最初の日）
+             */
+            streak_since?: string | null;
+            /**
+             * Streak At Least
+             * @description true は、判定の履歴の始まり（または400営業日）まで続いていて、それより前は分からない（「○日以上」）
+             */
+            streak_at_least?: boolean | null;
             /**
              * Max Shares
              * @description 1回の損失を基準額の決めた%（既定3%）に収めて建てられる株数。1株あたりの想定損失を 2ATR として計算し、100株単位で切り捨て。0は建てられない。ATRがなければ null
@@ -1939,7 +1969,7 @@ export interface operations {
     breadth_market_breadth_get: {
         parameters: {
             query?: {
-                /** @description 期間。day=前日比、week=前週末比、month=前月末比 */
+                /** @description 期間。day=前日比、week=5営業日前比、month=20営業日前比（日数は設定 market） */
                 period?: "day" | "week" | "month";
                 /** @description 基準日（YYYY-MM-DD）。省略時は日足がある最新日 */
                 as_of?: string | null;
@@ -1977,7 +2007,7 @@ export interface operations {
     sectors_market_sectors_get: {
         parameters: {
             query?: {
-                /** @description 期間。day=前日比、week=前週末比、month=前月末比 */
+                /** @description 期間。day=前日比、week=5営業日前比、month=20営業日前比（日数は設定 market） */
                 period?: "day" | "week" | "month";
                 /** @description 基準日（YYYY-MM-DD）。省略時は日足がある最新日 */
                 as_of?: string | null;

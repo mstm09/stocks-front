@@ -133,6 +133,25 @@ test('建てられる株数を出し、0株の行はグレーにする（選ん�
   expect(codesInTable()).toEqual(['7203', '8697']) // 少ない順
 })
 
+test('継続日数を出し、初日の銘柄には「新規」の印を付ける', async () => {
+  mockApi([
+    indicators({ streak_days: 5, streak_since: '2026-08-08', streak_at_least: false }),
+    indicators({ code: '72030', name: 'トヨタ自動車', streak_days: 1, streak_since: '2026-08-14', streak_at_least: false }),
+    indicators({ code: '67580', name: 'ソニーグループ', streak_days: 12, streak_since: '2026-07-30', streak_at_least: true }),
+  ])
+  renderApp('/candidates')
+  await screen.findByText('日本取引所グループ')
+
+  const row = (name: string) => screen.getByText(name).closest('tr')!
+  expect(within(row('日本取引所グループ')).getByTitle('2026-08-08 から')).toHaveTextContent('5日')
+  expect(within(row('トヨタ自動車')).getByText('新規')).toBeInTheDocument()
+  expect(within(row('ソニーグループ')).getByTitle('2026-07-30 から')).toHaveTextContent('12日以上')
+  expect(within(row('ソニーグループ')).queryByText('新規')).not.toBeInTheDocument()
+
+  await userEvent.click(screen.getByRole('button', { name: /継続/ }))
+  expect(codesInTable()).toEqual(['7203', '8697', '6758']) // 短い順
+})
+
 test('基準額を変えると、すぐ株数とグレーが変わり、次に開いたときも覚えている', async () => {
   mockApi([indicators(), indicators({ code: '72030', name: 'トヨタ自動車', atr: 160 })])
   const { unmount } = renderApp('/candidates')
