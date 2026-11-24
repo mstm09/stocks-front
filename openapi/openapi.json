@@ -485,11 +485,11 @@
                 "month"
               ],
               "type": "string",
-              "description": "期間。day=前日比、week=前週末比、month=前月末比",
+              "description": "期間。day=前日比、week=5営業日前比、month=20営業日前比（日数は設定 market）",
               "default": "day",
               "title": "Period"
             },
-            "description": "期間。day=前日比、week=前週末比、month=前月末比"
+            "description": "期間。day=前日比、week=5営業日前比、month=20営業日前比（日数は設定 market）"
           },
           {
             "name": "as_of",
@@ -592,11 +592,11 @@
                 "month"
               ],
               "type": "string",
-              "description": "期間。day=前日比、week=前週末比、month=前月末比",
+              "description": "期間。day=前日比、week=5営業日前比、month=20営業日前比（日数は設定 market）",
               "default": "day",
               "title": "Period"
             },
-            "description": "期間。day=前日比、week=前週末比、month=前月末比"
+            "description": "期間。day=前日比、week=5営業日前比、month=20営業日前比（日数は設定 market）"
           },
           {
             "name": "as_of",
@@ -1844,7 +1844,7 @@
               }
             ],
             "title": "Ratio",
-            "description": "値上がり ÷ 値下がり × 100。値下がりが0のときは null"
+            "description": "値上がり ÷ 値下がり（小数2桁）。1で均衡、1より大きいと値上がりが多い。値下がりが0のときは null"
           }
         },
         "type": "object",
@@ -2145,6 +2145,42 @@
               "日本取引所グループ"
             ]
           },
+          "sector17": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector17",
+            "description": "17業種（TOPIX-17）"
+          },
+          "sector33": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector33",
+            "description": "33業種"
+          },
+          "market_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Name",
+            "description": "市場区分（プライム等）"
+          },
           "as_of_date": {
             "type": "string",
             "format": "date",
@@ -2371,6 +2407,43 @@
             ],
             "title": "Atr Pct",
             "description": "ATR ÷ 基準日の終値（%）"
+          },
+          "streak_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Streak Days",
+            "description": "基準日まで、何営業日続けて売り建て候補か（基準日を含む）。候補一覧だけで付く"
+          },
+          "streak_since": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Streak Since",
+            "description": "候補になった日（続いている最初の日）"
+          },
+          "streak_at_least": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Streak At Least",
+            "description": "true は、判定の履歴の始まり（または400営業日）まで続いていて、それより前は分からない（「○日以上」）"
           },
           "max_shares": {
             "anyOf": [
