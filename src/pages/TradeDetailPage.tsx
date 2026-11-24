@@ -10,11 +10,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { type Trade, useDeleteExit, useTrade } from '@/features/trades/api'
+import { type Trade, useDeleteExit, useDeleteStopChange, useTrade } from '@/features/trades/api'
 import {
   AddExitDialog,
   DeleteTradeDialog,
   EditPlanDialog,
+  MoveStopDialog,
   ReviewDialog,
 } from '@/features/trades/TradeDialogs'
 import { StatusBadge } from '@/features/trades/TradeTable'
@@ -22,9 +23,12 @@ import { changeColor, formatCode, formatPnl, formatPrice, formatR, formatYen } f
 import { cn } from '@/lib/utils'
 
 /** 開いているフォームの種類。null は、どれも開いていない。 */
-type DialogName = 'exit' | 'plan' | 'review' | 'delete' | null
+type DialogName = 'exit' | 'stop' | 'plan' | 'review' | 'delete' | null
 
-/** 売買1件（/trades/12）。決済の登録、ロスカットなどの変更、自己採点、削除ができる。 */
+/**
+ * 売買1件（/trades/12）。決済の登録、ロスカットを動かす（履歴に残る）、指値・メモの変更、
+ * 自己採点、削除ができる。
+ */
 export function TradeDetailPage() {
   const id = Number(useParams().id)
   const navigate = useNavigate()
@@ -60,8 +64,13 @@ export function TradeDetailPage() {
         <StatusBadge trade={trade} />
         <div className="ml-auto flex gap-2">
           {trade.status === 'OPEN' && <Button onClick={() => setDialog('exit')}>決済を登録</Button>}
+          {trade.status === 'OPEN' && (
+            <Button variant="outline" onClick={() => setDialog('stop')}>
+              ロスカットを動かす
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setDialog('plan')}>
-            ロスカット・メモを変える
+            指値・メモを変える
           </Button>
           <Button variant="outline" onClick={() => setDialog('review')}>
             自己採点
@@ -90,11 +99,26 @@ export function TradeDetailPage() {
               <span className="ml-2 text-muted-foreground">{trade.stop_loss_reason}</span>
             )}
           </Item>
+          {trade.initial_stop_price != null && trade.initial_stop_price !== trade.stop_loss_price && (
+            <Item label="最初のロスカット">{formatPrice(trade.initial_stop_price)}円</Item>
+          )}
           <Item label="想定損失">
             {trade.risk_amount == null ? '-' : `${formatYen(trade.risk_amount)}円`}
+            <span className="ml-2 text-xs text-muted-foreground">最初のロスカットで計算</span>
           </Item>
+          {trade.stop_pnl != null && (
+            <Item label="ロスカットでの損益">
+              <span className={cn('font-medium', changeColor(trade.stop_pnl))}>
+                {formatPnl(trade.stop_pnl)}円
+              </span>
+              <span className="ml-2 text-xs text-muted-foreground">
+                {trade.stop_pnl >= 0 ? '利益を確保できている' : '残りの株が今のロスカットで決済されたとき'}
+              </span>
+            </Item>
+          )}
           <Item label="指値">
             {trade.limit_price == null ? '-' : `${formatPrice(trade.limit_price)}円`}
+            {trade.limit_price != null && trade.limit_quantity != null && `（${trade.limit_quantity}株）`}
           </Item>
           <Item label="確定損益">
             <span className={cn('font-semibold', changeColor(trade.realized_pnl))}>
@@ -109,6 +133,17 @@ export function TradeDetailPage() {
           </Item>
         </Card>
       </div>
+
+      <section aria-labelledby="stops-heading" className="space-y-2">
+        <h2 id="stops-heading" className="font-semibold">
+          ロスカットの履歴
+        </h2>
+        {trade.stop_changes.length > 0 ? (
+          <StopTable trade={trade} />
+        ) : (
+          <p className="text-sm text-muted-foreground">ロスカットは設定していません。</p>
+        )}
+      </section>
 
       <section aria-labelledby="exits-heading" className="space-y-2">
         <h2 id="exits-heading" className="font-semibold">
@@ -139,6 +174,7 @@ export function TradeDetailPage() {
       </section>
 
       {dialog === 'exit' && <AddExitDialog trade={trade} onClose={close} />}
+      {dialog === 'stop' && <MoveStopDialog trade={trade} onClose={close} />}
       {dialog === 'plan' && <EditPlanDialog trade={trade} onClose={close} />}
       {dialog === 'review' && <ReviewDialog trade={trade} onClose={close} />}
       {dialog === 'delete' && (
@@ -152,7 +188,7 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section aria-label={title} className="rounded-lg border bg-card p-4">
       <h2 className="mb-3 text-sm font-medium text-muted-foreground">{title}</h2>
-      <dl className="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-2 text-sm tabular-nums">{children}</dl>
+      <dl className="grid grid-cols-[9rem_1fr] gap-x-3 gap-y-2 text-sm tabular-nums">{children}</dl>
     </section>
   )
 }
@@ -204,6 +240,56 @@ function ExitTable({ trade }: { trade: Trade }) {
                     onClick={() => remove.mutate(e.id)}
                   >
                     取り消す
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      {remove.error && <ErrorMessage error={remove.error} />}
+    </div>
+  )
+}
+
+/** ロスカットの履歴（古い順）。いちばん下が今のロスカット。間違えて登録した行は消せる。 */
+function StopTable({ trade }: { trade: Trade }) {
+  const remove = useDeleteStopChange(trade.id)
+  return (
+    <div className="space-y-2">
+      <div className="rounded-lg border bg-card">
+        <Table className="tabular-nums">
+          <TableHeader className="bg-muted/60 text-xs">
+            <TableRow>
+              <TableHead className="h-9">日付</TableHead>
+              <TableHead className="h-9">変更</TableHead>
+              <TableHead className="h-9">根拠</TableHead>
+              <TableHead className="h-9">メモ</TableHead>
+              <TableHead className="h-9" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {trade.stop_changes.map((s, i) => (
+              <TableRow key={s.id}>
+                <TableCell>{s.changed_on}</TableCell>
+                <TableCell>
+                  {i === 0
+                    ? `${formatPrice(s.price)}円に設定`
+                    : s.price == null
+                      ? `${formatPrice(s.previous_price)}円 → 外した`
+                      : `${formatPrice(s.previous_price)}円 → ${formatPrice(s.price)}円`}
+                </TableCell>
+                <TableCell>{s.reason ?? ''}</TableCell>
+                <TableCell className="text-muted-foreground">{s.memo ?? ''}</TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={remove.isPending}
+                    aria-label={`${s.changed_on} のロスカットの変更を消す`}
+                    onClick={() => remove.mutate(s.id)}
+                  >
+                    消す
                   </Button>
                 </TableCell>
               </TableRow>

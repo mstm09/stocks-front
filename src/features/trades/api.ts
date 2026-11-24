@@ -8,6 +8,8 @@ export type TradeIn = Schemas['TradeIn']
 export type TradeUpdate = Schemas['TradeUpdate']
 export type ExitIn = Schemas['ExitIn']
 export type TradeExit = Schemas['ExitOut']
+export type StopChange = Schemas['StopChangeOut']
+export type StopChangeIn = Schemas['StopChangeIn']
 export type Cash = Schemas['CashOut']
 export type CashIn = Schemas['CashIn']
 export type Position = Schemas['PositionOut']
@@ -122,6 +124,35 @@ export function useDeleteExit(id: number) {
       unwrap(
         await api.DELETE('/trades/{trade_id}/exits/{exit_id}', {
           params: { path: { trade_id: id, exit_id: exitId } },
+        }),
+      ),
+    onSuccess: refresh,
+  })
+}
+
+/**
+ * ロスカットの設定・変更を、履歴に1行足す（POST /trades/{id}/stops）。
+ * price を null にすると、ロスカットを外した記録になる。
+ */
+export function useAddStopChange(id: number) {
+  const refresh = useRefresh()
+  return useMutation<Trade, ApiError, StopChangeIn>({
+    mutationFn: async (body) =>
+      unwrap(
+        await api.POST('/trades/{trade_id}/stops', { params: { path: { trade_id: id } }, body }),
+      ),
+    onSuccess: refresh,
+  })
+}
+
+/** ロスカットの履歴を1行消す（DELETE /trades/{id}/stops/{stop_id}）。登録の間違い用。 */
+export function useDeleteStopChange(id: number) {
+  const refresh = useRefresh()
+  return useMutation<Trade, ApiError, number>({
+    mutationFn: async (stopId) =>
+      unwrap(
+        await api.DELETE('/trades/{trade_id}/stops/{stop_id}', {
+          params: { path: { trade_id: id, stop_id: stopId } },
         }),
       ),
     onSuccess: refresh,
