@@ -14,6 +14,7 @@ import {
   useAddExit,
   useAddStopChange,
   useAddTrade,
+  useCorrectEntry,
   useDeleteTrade,
   useUpdateTrade,
 } from './api'
@@ -186,6 +187,57 @@ export function AddExitDialog({ trade, onClose }: DialogProps & { trade: Trade }
         </Field>
         <Field htmlFor="exit-memo" label="メモ" className="col-span-2">
           <Input id="exit-memo" value={form.memo} onChange={set('memo')} />
+        </Field>
+      </div>
+    </FormDialog>
+  )
+}
+
+/**
+ * 新規の約定（日・株数・価格）の登録の間違いを直す。
+ * 決済・ロスカットの履歴・自己採点は残り、損益などは直した値で計算し直される。
+ */
+export function FixEntryDialog({ trade, onClose }: DialogProps & { trade: Trade }) {
+  const [form, setForm] = useState({
+    opened_on: trade.opened_on,
+    quantity: String(trade.quantity),
+    entry_price: fromNumber(trade.entry_price),
+  })
+  const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
+    setForm((prev) => ({ ...prev, [key]: e.target.value }))
+  const fix = useCorrectEntry(trade.id)
+
+  function submit() {
+    fix.mutate(
+      {
+        opened_on: form.opened_on,
+        quantity: toNumber(form.quantity),
+        entry_price: toNumber(form.entry_price),
+      },
+      { onSuccess: onClose },
+    )
+  }
+
+  return (
+    <FormDialog
+      open
+      onOpenChange={onClose}
+      title="新規の約定を修正"
+      description="登録の間違いを直します。決済・ロスカットの履歴・自己採点は残り、損益は直した値で計算し直します。"
+      submitLabel="修正する"
+      pending={fix.isPending}
+      error={fix.error}
+      onSubmit={submit}
+    >
+      <div className="grid grid-cols-3 gap-3">
+        <Field htmlFor="fix-date" label="新規の約定日" required>
+          <Input id="fix-date" type="date" value={form.opened_on} onChange={set('opened_on')} required />
+        </Field>
+        <Field htmlFor="fix-quantity" label="株数" required>
+          <Input id="fix-quantity" type="number" min="1" value={form.quantity} onChange={set('quantity')} required />
+        </Field>
+        <Field htmlFor="fix-price" label="新規の約定価格（円）" required>
+          <Input id="fix-price" type="number" step="any" min="0" value={form.entry_price} onChange={set('entry_price')} required />
         </Field>
       </div>
     </FormDialog>

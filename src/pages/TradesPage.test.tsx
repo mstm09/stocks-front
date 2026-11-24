@@ -46,6 +46,10 @@ function mockTradesApi(initial: Trade[]) {
         exits: [{ id: 1, closed_on: body.closed_on, quantity: 300, price: body.price, fee: body.fee, pnl: 15000, memo: null }],
       })
     }
+    if (url.pathname.endsWith('/entry') && request.method === 'PATCH') {
+      if (body.quantity === 50) return json({ detail: '株数は、決済済みの株数（100）以上にしてください' }, 400)
+      return replace({ ...current, ...body })
+    }
     if (url.pathname.endsWith('/stops') && request.method === 'POST') {
       // 本物のAPIと同じく、履歴に1行足し、いちばん新しい行を今のロスカットにする
       const last = current.stop_changes.at(-1)
@@ -337,6 +341,34 @@ test('指値の株数を変える（ロスカットはこのフォームでは�
   expect(await screen.findByText('900円（100株）')).toBeInTheDocument()
   expect(sent[0]).toMatchObject({ method: 'PATCH', body: { limit_price: 900, limit_quantity: 100 } })
   expect(sent[0].body).not.toHaveProperty('stop_loss_price')
+})
+
+test('修正ボタンで、新規の約定価格を直す（間違いはAPIのエラーを出す）', async () => {
+  const sent = mockTradesApi([trade()])
+  const user = userEvent.setup()
+  renderApp('/trades/1')
+  await user.click(await screen.findByRole('button', { name: '修正' }))
+  const dialog = within(await screen.findByRole('dialog', { name: '新規の約定を修正' }))
+  expect(dialog.getByLabelText(/新規の約定日/)).toHaveValue('2026-08-03')
+
+  const quantity = dialog.getByLabelText(/株数/)
+  await user.clear(quantity)
+  await user.type(quantity, '50')
+  await user.click(dialog.getByRole('button', { name: '修正する' }))
+  expect(await dialog.findByText('株数は、決済済みの株数（100）以上にしてください')).toBeInTheDocument()
+
+  await user.clear(quantity)
+  await user.type(quantity, '300')
+  const price = dialog.getByLabelText(/新規の約定価格/)
+  await user.clear(price)
+  await user.type(price, '1005')
+  await user.click(dialog.getByRole('button', { name: '修正する' }))
+  await waitForDialogToClose()
+  expect(sent.at(-1)).toMatchObject({
+    method: 'PATCH',
+    path: '/api/trades/1/entry',
+    body: { opened_on: '2026-08-03', quantity: 300, entry_price: 1005 },
+  })
 })
 
 async function waitForDialogToClose() {
