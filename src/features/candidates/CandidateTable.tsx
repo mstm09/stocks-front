@@ -20,11 +20,6 @@ const COLUMNS: { label: string; title?: string; sortKey?: SortKey; numeric?: boo
   { label: 'コード', sortKey: 'code' },
   { label: '銘柄名' },
   { label: '終値', title: '基準日の調整後終値', sortKey: 'close', numeric: true },
-  { label: '10日', title: '日足10日の移動平均', numeric: true },
-  { label: '25日', title: '日足25日の移動平均', numeric: true },
-  { label: '60日', title: '日足60日の移動平均', numeric: true },
-  { label: '13週', title: '週足13週の移動平均', numeric: true },
-  { label: '26週', title: '週足26週の移動平均', numeric: true },
   { label: '価格帯', title: '直近の高値〜安値を3等分したときの、現在の位置' },
   { label: 'ATR', title: '1日の値幅の平均（円）', sortKey: 'atr', numeric: true },
   {
@@ -113,11 +108,6 @@ export function CandidateTable({ candidates, selectedCode, onSelect, onOrder }: 
                 <TableCell className="font-mono">{formatCode(c.code)}</TableCell>
                 <TableCell className="max-w-40 truncate">{c.name ?? '-'}</TableCell>
                 <TableCell className="text-right font-medium">{formatPrice(c.close)}</TableCell>
-                <TableCell className="text-right">{formatPrice(c.ma10)}</TableCell>
-                <TableCell className="text-right">{formatPrice(c.ma25)}</TableCell>
-                <TableCell className="text-right">{formatPrice(c.ma60)}</TableCell>
-                <TableCell className="text-right">{formatPrice(c.wma13)}</TableCell>
-                <TableCell className="text-right">{formatPrice(c.wma26)}</TableCell>
                 <TableCell>{formatZone(c.range_zone)}</TableCell>
                 <TableCell className="text-right">{formatPrice(c.atr)}</TableCell>
                 <TableCell className="text-right">{formatShares(c.max_shares)}</TableCell>
