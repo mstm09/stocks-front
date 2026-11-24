@@ -182,8 +182,8 @@ export function OrderDialog({ stock, sizing, asOf, onClose, onAdded }: Props) {
 
 const TARGET_LABELS: Record<string, string> = { '1': '1ATR付近', '1.5': '1.5ATR付近', '2': '2ATR付近' }
 
-/** ロスカットの候補を、押せるボタンで並べる。 */
-function StopCandidateButtons(props: {
+/** ロスカットの候補を、押せるボタンで並べる（注文ダイアログと、ロスカットを動かすダイアログで使う）。 */
+export function StopCandidateButtons(props: {
   isShort: boolean
   loading: boolean
   error: Error | null
@@ -191,12 +191,16 @@ function StopCandidateButtons(props: {
   lookbackDays: number | undefined
   selected: number | null
   onPick: (c: StopCandidate) => void
+  /** 候補がないときの文 */
+  emptyText?: string
 }) {
   const note = (text: string) => <p className="text-sm text-muted-foreground">{text}</p>
   if (!props.isShort) return note('ロスカットの候補は、売り建てのときだけ出します。')
   if (props.error) return <p className="text-sm text-destructive">{props.error.message}</p>
   if (props.loading || !props.candidates) return note('探しています…')
-  if (props.candidates.length === 0) return note('候補なし（1〜2ATRの範囲に、陰線の高値がありません）')
+  if (props.candidates.length === 0) {
+    return note(props.emptyText ?? '候補なし（1〜2ATRの範囲に、陰線の高値がありません）')
+  }
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap gap-2">

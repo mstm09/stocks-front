@@ -5,6 +5,8 @@ import { NativeSelect } from '@/components/NativeSelect'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { today } from '@/lib/date'
+import { type StopCandidate, useTrailingStopCandidates } from '@/features/orders/api'
+import { StopCandidateButtons } from '@/features/orders/OrderDialog'
 import { formatPnl, formatPrice, formatYen } from '@/lib/format'
 import { fromNumber, toNumber, toText } from '@/lib/number'
 import {
@@ -312,6 +314,22 @@ export function MoveStopDialog({ trade, onClose }: DialogProps & { trade: Trade 
     setForm((prev) => ({ ...prev, [key]: e.target.value }))
   const add = useAddStopChange(trade.id)
 
+  // 候補: 最新の終値と最新のATRから（新規のときと同じ考え方）。売り建てで、保有中のときだけ。
+  // 有利な方向にしか動かさないので、今のロスカットより下（売り建て）の候補だけ出す。
+  const isShort = trade.kind === 'MARGIN_SHORT'
+  const stops = useTrailingStopCandidates(trade.code, isShort)
+  const current = trade.stop_loss_price
+  const candidates = stops.data?.candidates.filter((c) => current == null || c.price < current)
+
+  function pick(c: StopCandidate) {
+    setRemove(false)
+    setForm((prev) => ({
+      ...prev,
+      price: String(c.price),
+      reason: `${c.bar_date} の陰線の高値 ${formatPrice(c.bar_high)} の1ティック上（終値から${c.atr_multiple.toFixed(2)}ATR）`,
+    }))
+  }
+
   // 動かしたあとのロスカットで、残りの株が決済されたときの損益（費用は含まない）
   const price = toNumber(form.price)
   const direction = trade.kind === 'MARGIN_SHORT' ? -1 : 1
@@ -353,6 +371,27 @@ export function MoveStopDialog({ trade, onClose }: DialogProps & { trade: Trade 
         >
           <Input id="stop-price" type="number" step="any" min="0" value={form.price} onChange={set('price')} required={!remove} disabled={remove} />
         </Field>
+        <div className="col-span-2 space-y-1.5">
+          <p className="text-sm font-medium">
+            ロスカット位置の候補
+            {stops.data?.entry_price != null && (
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                {stops.data.as_of_date} の終値 {formatPrice(stops.data.entry_price)}円・ATR{' '}
+                {formatPrice(stops.data.atr)}円 から
+              </span>
+            )}
+          </p>
+          <StopCandidateButtons
+            isShort={isShort}
+            loading={stops.isFetching && !stops.data}
+            error={stops.error}
+            candidates={candidates}
+            lookbackDays={stops.data?.lookback_days}
+            selected={price}
+            onPick={pick}
+            emptyText="候補なし（今のロスカットより下に、1〜2ATRの陰線の高値がありません。今のロスカットのまま）"
+          />
+        </div>
         {trade.stop_loss_price != null && (
           <label className="col-span-2 flex items-center gap-2 text-sm">
             <input type="checkbox" checked={remove} onChange={(e) => setRemove(e.target.checked)} />

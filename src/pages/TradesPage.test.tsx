@@ -24,6 +24,18 @@ function mockTradesApi(initial: Trade[]) {
     }
 
     if (url.pathname === '/api/orders') return json([]) // 注文は、下の別のテストで確かめる
+    if (url.pathname.endsWith('/stop-candidates')) {
+      // 最新の終値 960円・ATR 20円。範囲は 980〜1,000円
+      expect(url.searchParams.has('entry_price')).toBe(false) // 注文価格なし＝最新の終値
+      return json({
+        code: '86970', as_of_date: '2026-08-14', entry_price: 960, atr: 20, range_low: 980, range_high: 1000, lookback_days: 15,
+        candidates: [
+          { price: 981, target_multiple: 1, atr_multiple: 1.05, distance: 21, bar_date: '2026-08-10', bar_high: 980 },
+          { price: 990, target_multiple: 1.5, atr_multiple: 1.5, distance: 30, bar_date: '2026-08-07', bar_high: 989.5 },
+          { price: 1000, target_multiple: 2, atr_multiple: 2, distance: 40, bar_date: '2026-08-05', bar_high: 999 },
+        ],
+      })
+    }
     if (url.pathname === '/api/trades' && request.method === 'GET') {
       const status = url.searchParams.get('status')
       return json(trades.filter((t) => !status || t.status === status))
@@ -314,6 +326,25 @@ test('ロスカットを動かすと、履歴に残り、確保できた損益�
   await user.click(within(history).getAllByRole('button', { name: /ロスカットの変更を消す/ })[1])
   await vi.waitFor(() => expect(within(history).queryByText('1,060円 → 980円')).not.toBeInTheDocument())
   expect(sent[1]).toMatchObject({ method: 'DELETE', path: '/api/trades/1/stops/51' })
+})
+
+test('ロスカットを動かすときは、今のロスカットより下の候補だけ出す（最新の終値とATRから）', async () => {
+  // 売り建て 1,000円・今のロスカット 995円 → 1,000円の候補は、上に動かすことになるので出さない
+  mockTradesApi([trade({ stop_loss_price: 995, stop_changes: [{ ...FIRST_STOP, price: 995 }] })])
+  const user = userEvent.setup()
+  renderApp('/trades/1')
+  await user.click(await screen.findByRole('button', { name: 'ロスカットを動かす' }))
+  const dialog = within(await screen.findByRole('dialog', { name: 'ロスカットを動かす' }))
+
+  expect(await dialog.findByText(/2026-08-14 の終値 960円・ATR 20円 から/)).toBeInTheDocument()
+  expect(dialog.getByRole('button', { name: /1ATR付近 981円/ })).toBeInTheDocument()
+  expect(dialog.queryByRole('button', { name: /2ATR付近 1,000円/ })).not.toBeInTheDocument()
+
+  await user.click(dialog.getByRole('button', { name: /1.5ATR付近 990円/ }))
+  expect(dialog.getByLabelText(/新しいロスカット/)).toHaveValue(990)
+  expect(dialog.getByLabelText('根拠')).toHaveValue('2026-08-07 の陰線の高値 989.5 の1ティック上（終値から1.50ATR）')
+  // 売り建て 1,000円 × 300株。990円で決済されると +3,000円
+  expect(dialog.getByText('ここで決済されると +3,000円（利益を確保）')).toBeInTheDocument()
 })
 
 test('ロスカットを外す', async () => {
