@@ -443,6 +443,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Stats
+         * @description 売買の成績。すべて決済した売買を、最後に決済した日の年で集計する（入出金は使わない）。
+         */
+        get: operations["get_stats_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/portfolio": {
         parameters: {
             query?: never;
@@ -1180,6 +1200,102 @@ export interface components {
              * @description 単元株数。株数はこの単位で切り捨てる
              */
             lot_size: number;
+        };
+        /**
+         * StatsOut
+         * @description 売買の成績。すべて決済した売買を、最後に決済した日の年で集計する。
+         */
+        StatsOut: {
+            /** @description システム開始からの累計 */
+            total: components["schemas"]["StatsRowOut"];
+            /**
+             * Years
+             * @description 年ごと（新しい年が先）
+             */
+            years: components["schemas"]["StatsRowOut"][];
+            /**
+             * Open Trades
+             * @description 保有中の売買の数（成績には入らない）
+             */
+            open_trades: number;
+        };
+        /** StatsRowOut */
+        StatsRowOut: {
+            /**
+             * Year
+             * @description 年。null は、システム開始からの累計
+             */
+            year: number | null;
+            /**
+             * First Date
+             * @description その期間で、最初に決済した日
+             */
+            first_date: string | null;
+            /**
+             * Last Date
+             * @description その期間で、最後に決済した日
+             */
+            last_date: string | null;
+            /**
+             * Trades
+             * @description 回数（すべて決済した売買の数）
+             */
+            trades: number;
+            /**
+             * Wins
+             * @description 勝ち（確定損益がプラス）
+             */
+            wins: number;
+            /**
+             * Losses
+             * @description 負け（確定損益がマイナス）
+             */
+            losses: number;
+            /**
+             * Evens
+             * @description 引き分け（確定損益が0）
+             */
+            evens: number;
+            /**
+             * Win Rate
+             * @description 勝率（%）。勝ち ÷ （勝ち ＋ 負け）
+             */
+            win_rate: number | null;
+            /**
+             * Realized Pnl
+             * @description 確定損益の合計（円。費用を引いたあと）
+             */
+            realized_pnl: number;
+            /**
+             * Avg Win
+             * @description 勝った売買の、平均の利益（円）
+             */
+            avg_win: number | null;
+            /**
+             * Avg Loss
+             * @description 負けた売買の、平均の損失（円。マイナス）
+             */
+            avg_loss: number | null;
+            /**
+             * Max Win
+             * @description いちばん大きい利益（円）
+             */
+            max_win: number | null;
+            /**
+             * Max Loss
+             * @description いちばん大きい損失（円。マイナス）
+             */
+            max_loss: number | null;
+            /**
+             * Avg Score
+             * @description 自己採点の平均（採点した売買だけ）
+             */
+            avg_score: number | null;
+            /**
+             * Scored
+             * @description 採点した売買の数
+             */
+            scored: number;
         };
         /**
          * StockSummary
@@ -2457,6 +2573,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_stats_stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatsOut"];
                 };
             };
         };

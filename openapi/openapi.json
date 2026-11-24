@@ -1643,6 +1643,33 @@
         }
       }
     },
+    "/stats": {
+      "get": {
+        "tags": [
+          "trades"
+        ],
+        "summary": "Get Stats",
+        "description": "売買の成績。すべて決済した売買を、最後に決済した日の年で集計する（入出金は使わない）。",
+        "operationId": "get_stats_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/portfolio": {
       "get": {
         "tags": [
@@ -3178,6 +3205,198 @@
         ],
         "title": "SizingOut",
         "description": "建てられる株数の計算の前提（docs/orders.md §3）。"
+      },
+      "StatsOut": {
+        "properties": {
+          "total": {
+            "$ref": "#/components/schemas/StatsRowOut",
+            "description": "システム開始からの累計"
+          },
+          "years": {
+            "items": {
+              "$ref": "#/components/schemas/StatsRowOut"
+            },
+            "type": "array",
+            "title": "Years",
+            "description": "年ごと（新しい年が先）"
+          },
+          "open_trades": {
+            "type": "integer",
+            "title": "Open Trades",
+            "description": "保有中の売買の数（成績には入らない）"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "years",
+          "open_trades"
+        ],
+        "title": "StatsOut",
+        "description": "売買の成績。すべて決済した売買を、最後に決済した日の年で集計する。"
+      },
+      "StatsRowOut": {
+        "properties": {
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year",
+            "description": "年。null は、システム開始からの累計"
+          },
+          "first_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Date",
+            "description": "その期間で、最初に決済した日"
+          },
+          "last_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Date",
+            "description": "その期間で、最後に決済した日"
+          },
+          "trades": {
+            "type": "integer",
+            "title": "Trades",
+            "description": "回数（すべて決済した売買の数）"
+          },
+          "wins": {
+            "type": "integer",
+            "title": "Wins",
+            "description": "勝ち（確定損益がプラス）"
+          },
+          "losses": {
+            "type": "integer",
+            "title": "Losses",
+            "description": "負け（確定損益がマイナス）"
+          },
+          "evens": {
+            "type": "integer",
+            "title": "Evens",
+            "description": "引き分け（確定損益が0）"
+          },
+          "win_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Win Rate",
+            "description": "勝率（%）。勝ち ÷ （勝ち ＋ 負け）"
+          },
+          "realized_pnl": {
+            "type": "number",
+            "title": "Realized Pnl",
+            "description": "確定損益の合計（円。費用を引いたあと）"
+          },
+          "avg_win": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Win",
+            "description": "勝った売買の、平均の利益（円）"
+          },
+          "avg_loss": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Loss",
+            "description": "負けた売買の、平均の損失（円。マイナス）"
+          },
+          "max_win": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Win",
+            "description": "いちばん大きい利益（円）"
+          },
+          "max_loss": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Loss",
+            "description": "いちばん大きい損失（円。マイナス）"
+          },
+          "avg_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Score",
+            "description": "自己採点の平均（採点した売買だけ）"
+          },
+          "scored": {
+            "type": "integer",
+            "title": "Scored",
+            "description": "採点した売買の数"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "first_date",
+          "last_date",
+          "trades",
+          "wins",
+          "losses",
+          "evens",
+          "win_rate",
+          "realized_pnl",
+          "avg_win",
+          "avg_loss",
+          "max_win",
+          "max_loss",
+          "avg_score",
+          "scored"
+        ],
+        "title": "StatsRowOut"
       },
       "StockSummary": {
         "properties": {
