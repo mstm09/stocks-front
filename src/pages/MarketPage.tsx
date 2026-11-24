@@ -17,8 +17,9 @@ import { useUrlParams } from '@/lib/useUrlParams'
 
 const PERIODS: { value: Period; label: string; compare: string }[] = [
   { value: 'day', label: '日', compare: '前日比' },
-  { value: 'week', label: '週', compare: '前週末比' },
-  { value: 'month', label: '月', compare: '前月末比' },
+  // 週・月は暦ではなく、直近の営業日数で区切る（stock-analysis の設定 market。初期値 5・20）
+  { value: 'week', label: '週（5営業日）', compare: '5営業日前比' },
+  { value: 'month', label: '月（20営業日）', compare: '20営業日前比' },
 ]
 
 const SECTOR_KINDS: { value: SectorKind; label: string }[] = [

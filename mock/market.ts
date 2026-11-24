@@ -7,34 +7,19 @@ type Schemas = components['schemas']
 type Period = 'day' | 'week' | 'month'
 type Span = { start_date: string; end_date: string; base_date: string }
 
-/** その日が属する期間の名前（同じ名前の日は、同じ週・同じ月）。 */
-function groupKey(date: string, period: Period): string {
-  if (period === 'day') return date
-  if (period === 'month') return date.slice(0, 7)
-  // 週は月曜はじまり。その週の月曜の日付を名前にする
-  const d = new Date(`${date}T00:00:00Z`)
-  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7))
-  return d.toISOString().slice(0, 10)
-}
+/** 1期間の営業日数（本物は設定 market.week_days / month_days）。 */
+const PERIOD_DAYS: Record<Period, number> = { day: 1, week: 5, month: 20 }
 
-/** 基準日までの期間を、新しい順に返す。 */
+/**
+ * 基準日までの期間を、新しい順に返す。暦ではなく、直近の営業日数で区切る。
+ * 例: 週の1つめは「5営業日前 → 基準日」、2つめは「10営業日前 → 5営業日前」。
+ */
 function spans(period: Period, asOf: string): Span[] {
-  const groups: string[][] = []
-  let lastKey = ''
-  for (const date of TRADING_DAYS.filter((d) => d <= asOf)) {
-    const key = groupKey(date, period)
-    if (key !== lastKey) groups.push([])
-    groups[groups.length - 1].push(date)
-    lastKey = key
-  }
+  const n = PERIOD_DAYS[period]
+  const days = TRADING_DAYS.filter((d) => d <= asOf).reverse() // 新しい順
   const result: Span[] = []
-  for (let i = groups.length - 1; i >= 1; i--) {
-    const prev = groups[i - 1]
-    result.push({
-      start_date: groups[i][0],
-      end_date: groups[i][groups[i].length - 1],
-      base_date: prev[prev.length - 1],
-    })
+  for (let i = 0; (i + 1) * n < days.length; i++) {
+    result.push({ start_date: days[(i + 1) * n - 1], end_date: days[i * n], base_date: days[(i + 1) * n] })
   }
   return result
 }
