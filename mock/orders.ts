@@ -15,8 +15,8 @@ const STATUS_LABELS: Record<string, string> = { PENDING: '注文中', FILLED: '�
 let nextId = 500
 const orders: Order[] = [
   {
-    id: 1, code: '67580', kind: 'MARGIN_SHORT', ordered_on: '2026-11-12', quantity: 200, order_price: 2600,
-    expires_on: '2026-11-20', stop_loss_price: 2680, stop_loss_reason: '陰線の高値の1ティック上',
+    id: 1, code: '67580', kind: 'MARGIN_SHORT', ordered_on: '2026-11-12', quantity: 200, order_price: 3080,
+    expires_on: '2026-11-20', stop_loss_price: 3160, stop_loss_reason: '陰線の高値の1ティック上',
     limit_price: null, limit_quantity: null, memo: '戻り売り', status: 'PENDING', resolved_on: null, trade_id: null,
   },
 ]

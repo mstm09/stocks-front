@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router'
 import { Empty, ErrorMessage, Loading } from '@/components/Status'
 import { Button } from '@/components/ui/button'
+import { OrderSection } from '@/features/orders/OrderSection'
 import { type TradeStatus, useTrades } from '@/features/trades/api'
 import { AddTradeDialog } from '@/features/trades/TradeDialogs'
 import { TradeTable } from '@/features/trades/TradeTable'
@@ -13,7 +14,7 @@ const FILTERS: { value: TradeStatus | undefined; label: string }[] = [
 ]
 
 /**
- * 売買記録の一覧（/trades?status=OPEN）。
+ * 売買記録の一覧（/trades?status=OPEN）。上に、注文（指値で仕掛け中）の一覧を出す。
  * `?new=86970` を付けて開くと、その銘柄コードを入れた登録フォームが開く（銘柄詳細から来るとき）。
  */
 export function TradesPage() {
@@ -28,6 +29,15 @@ export function TradesPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-4">
         <h1 className="text-xl font-semibold">売買記録</h1>
+        <Button className="ml-auto" onClick={() => url.set('new', '-')}>
+          売買を登録
+        </Button>
+      </div>
+
+      <OrderSection />
+
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="text-lg font-semibold">売買</h2>
         <div role="group" aria-label="状態で絞る" className="flex gap-1">
           {FILTERS.map((f) => (
             <Button
@@ -41,11 +51,7 @@ export function TradesPage() {
             </Button>
           ))}
         </div>
-        <Button className="ml-auto" onClick={() => url.set('new', '-')}>
-          売買を登録
-        </Button>
       </div>
-
       {isPending && <Loading />}
       {error && <ErrorMessage error={error} />}
       {trades &&
