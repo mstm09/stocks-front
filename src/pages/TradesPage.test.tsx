@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Trade } from '@/features/trades/api'
-import { trade } from '@/test/fixtures'
+import { order, trade } from '@/test/fixtures'
 import { json, mockFetch, renderApp, type SentRequest } from '@/test/render'
 
 afterEach(() => vi.restoreAllMocks())
@@ -23,6 +23,7 @@ function mockTradesApi(initial: Trade[]) {
       return json(next)
     }
 
+    if (url.pathname === '/api/orders') return json([]) // 注文は、下の別のテストで確かめる
     if (url.pathname === '/api/trades' && request.method === 'GET') {
       const status = url.searchParams.get('status')
       return json(trades.filter((t) => !status || t.status === status))
@@ -169,3 +170,103 @@ test('ない番号の売買は、APIの文言を出す', async () => {
   expect(await screen.findByRole('alert')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: '売買記録へ戻る' })).toBeInTheDocument()
 })
+
+/** 注文のAPIの代わり。約定すると売買 #20 を作って返す。 */
+function mockOrdersApi(initial: ReturnType<typeof order>[]) {
+  let orders = [...initial]
+  const sent: SentRequest[] = []
+  mockFetch((url, request) => {
+    if (request.method !== 'GET') sent.push(request)
+    const body = request.body as Record<string, never>
+    if (url.pathname === '/api/trades') return json([])
+    if (url.pathname === '/api/trades/20') return json(trade({ id: 20, quantity: body?.quantity ?? 100 }))
+    if (url.pathname === '/api/orders') {
+      const status = url.searchParams.get('status')
+      return json(orders.filter((o) => !status || o.status === status))
+    }
+    const id = Number(url.pathname.match(/^\/api\/orders\/(\d+)/)?.[1])
+    const current = orders.find((o) => o.id === id)
+    if (!current) return undefined
+    const replace = (next: ReturnType<typeof order>) => {
+      orders = orders.map((o) => (o.id === id ? next : o))
+      return json(next)
+    }
+    if (url.pathname.endsWith('/fill')) {
+      replace({ ...current, status: 'FILLED', status_label: '約定', trade_id: 20, resolved_on: body.filled_on })
+      return json(trade({ id: 20, quantity: body.quantity }), 201)
+    }
+    if (url.pathname.endsWith('/cancel')) {
+      return replace({ ...current, status: 'CANCELLED', status_label: '取消', resolved_on: body.cancelled_on })
+    }
+    if (request.method === 'PATCH') return replace({ ...current, ...body })
+    return json(current)
+  })
+  return sent
+}
+
+test('注文中の一覧を出し、期限切れはしるしを変える', async () => {
+  mockOrdersApi([
+    order(),
+    order({ id: 6, code: '67580', name: 'ソニーグループ', is_expired: true, expires_on: '2026-11-20' }),
+    order({ id: 7, status: 'CANCELLED', status_label: '取消' }),
+  ])
+  renderApp('/trades')
+
+  const section = await screen.findByRole('region', { name: '注文' })
+  expect(await within(section).findByText('ソニーグループ')).toBeInTheDocument()
+  const jpx = within(section).getByText('日本取引所グループ').closest('tr')!
+  expect(within(jpx).getByText('注文中')).toBeInTheDocument()
+  expect(within(jpx).getByText('+2.04%')).toBeInTheDocument()
+  expect(within(jpx).getByText('18,000')).toBeInTheDocument()
+  const sony = within(section).getByText('ソニーグループ').closest('tr')!
+  expect(within(sony).getByText('期限切れ')).toBeInTheDocument()
+  expect(within(section).queryByText('#7')).not.toBeInTheDocument() // 取消は、既定では出さない
+
+  await userEvent.click(within(section).getByRole('button', { name: '全部' }))
+  const cancelled = (await within(section).findByText('#7')).closest('tr')!
+  expect(within(cancelled).getByText('取消')).toBeInTheDocument()
+  expect(within(cancelled).queryByRole('button')).not.toBeInTheDocument() // 取消のあとは操作できない
+})
+
+test('約定を登録すると、売買記録の画面へ移る', async () => {
+  const sent = mockOrdersApi([order()])
+  renderApp('/trades')
+  await userEvent.click(await screen.findByRole('button', { name: '注文 #5 の約定を登録' }))
+
+  const dialog = await screen.findByRole('dialog')
+  expect(within(dialog).getByLabelText(/約定価格/)).toHaveValue(1000) // 初期値は注文価格
+  const quantity = within(dialog).getByLabelText(/約定した株数/)
+  await userEvent.clear(quantity)
+  await userEvent.type(quantity, '100')
+  expect(within(dialog).getByText('残りの 200株は、取消扱いになります')).toBeInTheDocument()
+  await userEvent.click(within(dialog).getByRole('button', { name: '約定を登録する' }))
+
+  expect(await screen.findByRole('heading', { name: /#20/ })).toBeInTheDocument()
+  expect(sent[0]).toMatchObject({ method: 'POST', path: '/api/orders/5/fill', body: { quantity: 100, price: 1000, fee: 0 } })
+})
+
+test('注文を変える・取り消す', async () => {
+  const sent = mockOrdersApi([order()])
+  renderApp('/trades')
+
+  await userEvent.click(await screen.findByRole('button', { name: '注文 #5 を変える' }))
+  let dialog = await screen.findByRole('dialog')
+  const price = within(dialog).getByLabelText(/注文価格/)
+  await userEvent.clear(price)
+  await userEvent.type(price, '1010')
+  await userEvent.clear(within(dialog).getByLabelText(/有効期限/))
+  await userEvent.click(within(dialog).getByRole('button', { name: '保存する' }))
+  await waitForDialogToClose()
+  expect(sent[0]).toMatchObject({ method: 'PATCH', body: { order_price: 1010, expires_on: null, stop_loss_price: 1060 } })
+
+  await userEvent.click(await screen.findByRole('button', { name: '注文 #5 を取り消す' }))
+  dialog = await screen.findByRole('dialog')
+  await userEvent.click(within(dialog).getByRole('button', { name: '取り消す' }))
+  await waitForDialogToClose()
+  expect(sent[1]).toMatchObject({ method: 'POST', path: '/api/orders/5/cancel' })
+  expect(await screen.findByText(/注文中の注文はありません。/)).toBeInTheDocument()
+})
+
+async function waitForDialogToClose() {
+  await vi.waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+}

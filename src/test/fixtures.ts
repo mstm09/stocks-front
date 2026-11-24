@@ -85,3 +85,35 @@ export function trade(over: Partial<Trade> = {}): Trade {
     ...over,
   }
 }
+
+type Order = import('@/features/orders/api').Order
+
+/** テスト用の注文（信用売り・注文中）。変えたい項目だけ渡す。 */
+export function order(over: Partial<Order> = {}): Order {
+  return {
+    id: 5,
+    code: '86970',
+    name: '日本取引所グループ',
+    kind: 'MARGIN_SHORT',
+    kind_label: '信用売り',
+    ordered_on: '2026-11-24',
+    quantity: 300,
+    order_price: 1000,
+    expires_on: '2026-11-28',
+    stop_loss_price: 1060,
+    stop_loss_reason: '陰線の高値の1ティック上',
+    limit_price: null,
+    limit_quantity: null,
+    memo: null,
+    status: 'PENDING',
+    status_label: '注文中',
+    is_expired: false,
+    resolved_on: null,
+    trade_id: null,
+    risk_amount: 18000,
+    price: 980,
+    price_date: '2026-11-24',
+    to_order_pct: 2.04,
+    ...over,
+  }
+}
