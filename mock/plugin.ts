@@ -92,6 +92,9 @@ async function handle(req: IncomingMessage, url: URL): Promise<Result> {
   if ((m = path.match(/^\/trades\/(\d+)\/exits$/)) && method === 'POST') {
     return { status: 201, body: trades.addExit(Number(m[1]), await readJson(req)) }
   }
+  if ((m = path.match(/^\/trades\/(\d+)\/entry$/)) && method === 'PATCH') {
+    return { body: trades.correctEntry(Number(m[1]), await readJson(req)) }
+  }
   if ((m = path.match(/^\/trades\/(\d+)\/stops$/)) && method === 'POST') {
     return { status: 201, body: trades.addStop(Number(m[1]), await readJson(req)) }
   }

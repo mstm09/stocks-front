@@ -104,6 +104,21 @@ export function useUpdateTrade(id: number) {
   })
 }
 
+/**
+ * 新規の約定（日・株数・価格）の登録の間違いを直す（PATCH /trades/{id}/entry）。
+ * 決済・ロスカットの履歴・自己採点は残る。
+ */
+export function useCorrectEntry(id: number) {
+  const refresh = useRefresh()
+  return useMutation<Trade, ApiError, Schemas['TradeEntryFix']>({
+    mutationFn: async (body) =>
+      unwrap(
+        await api.PATCH('/trades/{trade_id}/entry', { params: { path: { trade_id: id } }, body }),
+      ),
+    onSuccess: refresh,
+  })
+}
+
 /** 売買を、決済ごと消す（DELETE /trades/{id}）。 */
 export function useDeleteTrade(id: number) {
   const refresh = useRefresh()

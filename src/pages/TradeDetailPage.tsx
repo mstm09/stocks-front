@@ -15,6 +15,7 @@ import {
   AddExitDialog,
   DeleteTradeDialog,
   EditPlanDialog,
+  FixEntryDialog,
   MoveStopDialog,
   ReviewDialog,
 } from '@/features/trades/TradeDialogs'
@@ -23,7 +24,7 @@ import { changeColor, formatCode, formatPnl, formatPrice, formatR, formatYen } f
 import { cn } from '@/lib/utils'
 
 /** 開いているフォームの種類。null は、どれも開いていない。 */
-type DialogName = 'exit' | 'stop' | 'plan' | 'review' | 'delete' | null
+type DialogName = 'exit' | 'stop' | 'plan' | 'fix' | 'review' | 'delete' | null
 
 /**
  * 売買1件（/trades/12）。決済の登録、ロスカットを動かす（履歴に残る）、指値・メモの変更、
@@ -74,6 +75,9 @@ export function TradeDetailPage() {
           </Button>
           <Button variant="outline" onClick={() => setDialog('review')}>
             自己採点
+          </Button>
+          <Button variant="outline" onClick={() => setDialog('fix')}>
+            修正
           </Button>
           <Button variant="destructive" onClick={() => setDialog('delete')}>
             消す
@@ -176,6 +180,7 @@ export function TradeDetailPage() {
       {dialog === 'exit' && <AddExitDialog trade={trade} onClose={close} />}
       {dialog === 'stop' && <MoveStopDialog trade={trade} onClose={close} />}
       {dialog === 'plan' && <EditPlanDialog trade={trade} onClose={close} />}
+      {dialog === 'fix' && <FixEntryDialog trade={trade} onClose={close} />}
       {dialog === 'review' && <ReviewDialog trade={trade} onClose={close} />}
       {dialog === 'delete' && (
         <DeleteTradeDialog trade={trade} onClose={close} onDeleted={() => navigate('/trades')} />

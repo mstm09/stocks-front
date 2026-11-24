@@ -155,6 +155,20 @@ export function updateTrade(id: number, body: Schemas['TradeUpdate']): TradeOut 
   return toOut(trade)
 }
 
+/** 新規の約定（日・株数・価格）を直す。決済・ロスカットの履歴は残す（チェックは本物より少ない）。 */
+export function correctEntry(id: number, body: Schemas['TradeEntryFix']): TradeOut {
+  const trade = find(id)
+  const exited = trade.exits.reduce((sum, e) => sum + e.quantity, 0)
+  if (body.quantity != null && body.quantity < exited) {
+    throw new MockError(400, `株数は、決済済みの株数（${exited}）以上にしてください`)
+  }
+  if (body.opened_on && body.opened_on !== trade.opened_on) {
+    for (const s of trade.stops) if (s.changed_on === trade.opened_on) s.changed_on = body.opened_on
+  }
+  Object.assign(trade, Object.fromEntries(Object.entries(body).filter(([, v]) => v != null)))
+  return toOut(trade)
+}
+
 /** ロスカットの設定・変更を、履歴に1行足す。最初のロスカットだけは損をする側に限る。 */
 export function addStop(id: number, body: Schemas['StopChangeIn']): TradeOut {
   const trade = find(id)

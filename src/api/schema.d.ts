@@ -233,6 +233,26 @@ export interface paths {
         patch: operations["update_trade_trades__trade_id__patch"];
         trace?: never;
     };
+    "/trades/{trade_id}/entry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Correct Entry
+         * @description 新規の約定（日・株数・価格）の登録の間違いを直す。決済・ロスカットの履歴は残る。
+         */
+        patch: operations["correct_entry_trades__trade_id__entry_patch"];
+        trace?: never;
+    };
     "/trades/{trade_id}/exits": {
         parameters: {
             query?: never;
@@ -1462,6 +1482,27 @@ export interface components {
             memo: string | null;
         };
         /**
+         * TradeEntryFix
+         * @description 新規の約定の修正（登録の間違いを直す）。送った項目だけ変わる。
+         */
+        TradeEntryFix: {
+            /**
+             * Opened On
+             * @description 新規の約定日
+             */
+            opened_on?: string | null;
+            /**
+             * Quantity
+             * @description 株数
+             */
+            quantity?: number | null;
+            /**
+             * Entry Price
+             * @description 新規の約定価格（円）
+             */
+            entry_price?: number | null;
+        };
+        /**
          * TradeIn
          * @description 売買（新規の約定）の登録。
          */
@@ -2108,6 +2149,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["TradeUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TradeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    correct_entry_trades__trade_id__entry_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trade_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TradeEntryFix"];
             };
         };
         responses: {

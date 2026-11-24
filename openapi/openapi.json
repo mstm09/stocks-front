@@ -928,6 +928,64 @@
         }
       }
     },
+    "/trades/{trade_id}/entry": {
+      "patch": {
+        "tags": [
+          "trades"
+        ],
+        "summary": "Correct Entry",
+        "description": "新規の約定（日・株数・価格）の登録の間違いを直す。決済・ロスカットの履歴は残る。",
+        "operationId": "correct_entry_trades__trade_id__entry_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trade_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Trade Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TradeEntryFix"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/trades/{trade_id}/exits": {
       "post": {
         "tags": [
@@ -3723,6 +3781,52 @@
           "memo"
         ],
         "title": "StopChangeOut"
+      },
+      "TradeEntryFix": {
+        "properties": {
+          "opened_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opened On",
+            "description": "新規の約定日"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity",
+            "description": "株数"
+          },
+          "entry_price": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Price",
+            "description": "新規の約定価格（円）"
+          }
+        },
+        "type": "object",
+        "title": "TradeEntryFix",
+        "description": "新規の約定の修正（登録の間違いを直す）。送った項目だけ変わる。"
       },
       "TradeIn": {
         "properties": {
