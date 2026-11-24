@@ -41,6 +41,19 @@ export function useStopCandidates(code: string, entryPrice: number | null, asOf:
   })
 }
 
+/**
+ * ロスカットを動かすときの候補（GET /stocks/{code}/stop-candidates を、注文価格なしで呼ぶ）。
+ * 基準は最新の終値と最新のATR（その時々のATR）。`enabled` が false のあいだは呼ばない。
+ */
+export function useTrailingStopCandidates(code: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['stop-candidates', code, 'latest-close'],
+    queryFn: async () =>
+      unwrap(await api.GET('/stocks/{code}/stop-candidates', { params: { path: { code } } })),
+    enabled,
+  })
+}
+
 // ---- 書く（useMutation）
 // 書いたあとは、注文・売買・成績の「覚えている値」を古いものとして扱い、取り直させる。
 
