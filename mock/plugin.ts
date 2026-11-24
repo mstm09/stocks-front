@@ -32,12 +32,9 @@ async function handle(req: IncomingMessage, url: URL): Promise<Result> {
   if (path === '/health') return { body: { status: 'ok' } }
 
   if (path === '/candidates') {
-    // 建てられる株数: 口座全体 × 3% ÷ 2ATR を100株単位で切り捨て（本物は settings の sizing）
-    const p = trades.portfolio(query.get('as_of'))
-    const sizing = {
-      equity: p.equity, equity_date: p.as_of_date, risk_pct: 3,
-      risk_amount: Math.max(p.equity * 0.03, 0), atr_multiple: 2, lot_size: 100,
-    }
+    // 建てられる株数: 基準額（省略時100万円）× 3% ÷ 2ATR を100株単位で切り捨て（本物は settings の sizing）
+    const capital = Number(query.get('capital') ?? 1_000_000)
+    const sizing = { capital, risk_pct: 3, risk_amount: capital * 0.03, atr_multiple: 2, lot_size: 100 }
     const candidates = STOCKS.map((s) => indicatorsOf(s, asOf))
       .filter((i) => i?.is_short_candidate)
       .map((i) => ({

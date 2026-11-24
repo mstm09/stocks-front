@@ -18,3 +18,17 @@ export function maxShares(
   const shares = Math.floor(riskAmount / lossPerShare + 1e-9)
   return Math.floor(shares / lotSize) * lotSize
 }
+
+/** 建てられる株数の前提（APIの sizing と同じ形）。 */
+export type SizingBase = {
+  capital: number
+  risk_pct: number
+  risk_amount: number
+  atr_multiple: number
+  lot_size: number
+}
+
+/** 基準額（円）を差し替えて、許容損失を計算し直す。%・倍率・単元はそのまま。 */
+export function withCapital<T extends SizingBase>(sizing: T, capital: number): T {
+  return { ...sizing, capital, risk_amount: Math.max((capital * sizing.risk_pct) / 100, 0) }
+}

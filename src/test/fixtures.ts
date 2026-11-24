@@ -32,11 +32,10 @@ export function indicators(over: Partial<Indicators> = {}): Indicators {
 
 type Sizing = import('@/features/candidates/api').Sizing
 
-/** テスト用の、建てられる株数の前提（口座全体 100万円 × 3%）。 */
+/** テスト用の、建てられる株数の前提（基準額 100万円 × 3%）。 */
 export function sizing(over: Partial<Sizing> = {}): Sizing {
   return {
-    equity: 1_000_000,
-    equity_date: '2026-08-14',
+    capital: 1_000_000,
     risk_pct: 3,
     risk_amount: 30_000,
     atr_multiple: 2,

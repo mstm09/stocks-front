@@ -32,7 +32,7 @@ export interface paths {
          * Candidates
          * @description 売り建て候補の一覧。各銘柄の指標つき（チャートは `chart_url`）。
          *
-         *     `max_shares` は、1回の損失を口座全体の決めた%に収めて建てられる株数（`sizing` が前提）。
+         *     `max_shares` は、1回の損失を基準額の決めた%に収めて建てられる株数（`sizing` が前提）。
          */
         get: operations["candidates_candidates_get"];
         put?: never;
@@ -766,7 +766,7 @@ export interface components {
             atr_pct?: number | null;
             /**
              * Max Shares
-             * @description 1回の損失を口座の決めた%（既定3%）に収めて建てられる株数。1株あたりの想定損失を 2ATR として計算し、100株単位で切り捨て。0は建てられない。ATRがなければ null
+             * @description 1回の損失を基準額の決めた%（既定3%）に収めて建てられる株数。1株あたりの想定損失を 2ATR として計算し、100株単位で切り捨て。0は建てられない。ATRがなければ null
              */
             max_shares?: number | null;
             /**
@@ -1156,24 +1156,18 @@ export interface components {
          */
         SizingOut: {
             /**
-             * Equity
-             * @description 口座全体（円）。現金 ＋ 現物の評価額 ＋ 信用の含み損益
+             * Capital
+             * @description 基準額（円）。`capital` で指定、省略時は設定の初期値
              */
-            equity: number;
-            /**
-             * Equity Date
-             * Format: date
-             * @description 口座全体を計算した日
-             */
-            equity_date: string;
+            capital: number;
             /**
              * Risk Pct
-             * @description 1回に許す損失（口座全体の%）
+             * @description 1回に許す損失（基準額の%）
              */
             risk_pct: number;
             /**
              * Risk Amount
-             * @description 許容損失（円）。口座全体がマイナスなら0
+             * @description 許容損失（円）= 基準額 × risk_pct%
              */
             risk_amount: number;
             /**
@@ -1593,6 +1587,8 @@ export interface operations {
             query?: {
                 /** @description 基準日（YYYY-MM-DD）。省略時は指標がある最新日 */
                 as_of?: string | null;
+                /** @description 建てられる株数の基準額（円）。省略時は設定の初期値（100万円） */
+                capital?: number | null;
             };
             header?: never;
             path?: never;
@@ -1679,6 +1675,8 @@ export interface operations {
             query?: {
                 /** @description 基準日（YYYY-MM-DD）。省略時は指標がある最新日 */
                 as_of?: string | null;
+                /** @description 建てられる株数の基準額（円）。省略時は設定の初期値（100万円） */
+                capital?: number | null;
             };
             header?: never;
             path: {

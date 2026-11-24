@@ -5,11 +5,13 @@ import { Empty, ErrorMessage, Loading } from '@/components/Status'
 import { useCandidates } from '@/features/candidates/api'
 import { CandidateTable } from '@/features/candidates/CandidateTable'
 import { SizingNote } from '@/features/candidates/SizingNote'
+import { useCapital } from '@/features/candidates/useCapital'
 import type { Order } from '@/features/orders/api'
 import { OrderDialog } from '@/features/orders/OrderDialog'
 import type { Indicators } from '@/features/stocks/api'
 import { StockPanel } from '@/features/stocks/StockPanel'
 import { formatCode, formatPrice } from '@/lib/format'
+import { maxShares, withCapital } from '@/lib/sizing'
 import { useUrlParams } from '@/lib/useUrlParams'
 
 /** 売り建て候補の一覧。基準日と選んだ銘柄は、URL（?as_of=2026-08-14&code=86970）に持たせる。 */
@@ -19,7 +21,16 @@ export function CandidatesPage() {
   const code = url.get('code')
 
   const { data, isPending, error } = useCandidates(asOf)
-  const selected = data?.candidates.find((c) => c.code === code)
+  // 建てられる株数は、画面の基準額（万円）で計算し直す（入力すると、すぐ変わる）
+  const capital = useCapital()
+  const sizing = data && withCapital(data.sizing, capital.yen)
+  const candidates = (data?.candidates ?? []).map((c) => ({
+    ...c,
+    max_shares: sizing
+      ? maxShares(sizing.risk_amount, c.atr == null ? null : c.atr * sizing.atr_multiple, sizing.lot_size)
+      : c.max_shares,
+  }))
+  const selected = candidates.find((c) => c.code === code)
   // 注文ダイアログを開いている銘柄と、登録した注文（「登録しました」を出すため）
   const [ordering, setOrdering] = useState<Indicators | null>(null)
   const [added, setAdded] = useState<Order | null>(null)
@@ -38,7 +49,14 @@ export function CandidatesPage() {
         </div>
       </div>
 
-      {data && <SizingNote sizing={data.sizing} />}
+      {sizing && (
+        <SizingNote
+          sizing={sizing}
+          capitalText={capital.text}
+          valid={capital.valid}
+          onCapitalChange={capital.change}
+        />
+      )}
       {added && (
         <p role="status" className="rounded-md border bg-card px-3 py-2 text-sm">
           注文 #{added.id}（{formatCode(added.code)} {added.name} {added.quantity}株 ×{' '}
@@ -59,7 +77,7 @@ export function CandidatesPage() {
         // 画面が広いほどチャートが大きくなる。
         <div className="grid items-start gap-4 xl:grid-cols-[minmax(56rem,1fr)_minmax(32rem,1fr)]">
           <CandidateTable
-            candidates={data.candidates}
+            candidates={candidates}
             selectedCode={code}
             onSelect={(c) => url.set('code', c)}
             onOrder={(stock) => {
@@ -82,10 +100,10 @@ export function CandidatesPage() {
         </div>
       )}
 
-      {ordering && data && (
+      {ordering && sizing && (
         <OrderDialog
           stock={ordering}
-          sizing={data.sizing}
+          sizing={sizing}
           asOf={asOf}
           onClose={() => setOrdering(null)}
           onAdded={(order) => {

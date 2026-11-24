@@ -37,7 +37,7 @@
           "stocks"
         ],
         "summary": "Candidates",
-        "description": "売り建て候補の一覧。各銘柄の指標つき（チャートは `chart_url`）。\n\n`max_shares` は、1回の損失を口座全体の決めた%に収めて建てられる株数（`sizing` が前提）。",
+        "description": "売り建て候補の一覧。各銘柄の指標つき（チャートは `chart_url`）。\n\n`max_shares` は、1回の損失を基準額の決めた%に収めて建てられる株数（`sizing` が前提）。",
         "operationId": "candidates_candidates_get",
         "security": [
           {
@@ -63,6 +63,25 @@
               "title": "As Of"
             },
             "description": "基準日（YYYY-MM-DD）。省略時は指標がある最新日"
+          },
+          {
+            "name": "capital",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "建てられる株数の基準額（円）。省略時は設定の初期値（100万円）",
+              "title": "Capital"
+            },
+            "description": "建てられる株数の基準額（円）。省略時は設定の初期値（100万円）"
           }
         ],
         "responses": {
@@ -230,6 +249,25 @@
               "title": "As Of"
             },
             "description": "基準日（YYYY-MM-DD）。省略時は指標がある最新日"
+          },
+          {
+            "name": "capital",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "建てられる株数の基準額（円）。省略時は設定の初期値（100万円）",
+              "title": "Capital"
+            },
+            "description": "建てられる株数の基準額（円）。省略時は設定の初期値（100万円）"
           }
         ],
         "responses": {
@@ -2259,7 +2297,7 @@
               }
             ],
             "title": "Max Shares",
-            "description": "1回の損失を口座の決めた%（既定3%）に収めて建てられる株数。1株あたりの想定損失を 2ATR として計算し、100株単位で切り捨て。0は建てられない。ATRがなければ null"
+            "description": "1回の損失を基準額の決めた%（既定3%）に収めて建てられる株数。1株あたりの想定損失を 2ATR として計算し、100株単位で切り捨て。0は建てられない。ATRがなければ null"
           },
           "chart_url": {
             "type": "string",
@@ -3104,26 +3142,20 @@
       },
       "SizingOut": {
         "properties": {
-          "equity": {
+          "capital": {
             "type": "number",
-            "title": "Equity",
-            "description": "口座全体（円）。現金 ＋ 現物の評価額 ＋ 信用の含み損益"
-          },
-          "equity_date": {
-            "type": "string",
-            "format": "date",
-            "title": "Equity Date",
-            "description": "口座全体を計算した日"
+            "title": "Capital",
+            "description": "基準額（円）。`capital` で指定、省略時は設定の初期値"
           },
           "risk_pct": {
             "type": "number",
             "title": "Risk Pct",
-            "description": "1回に許す損失（口座全体の%）"
+            "description": "1回に許す損失（基準額の%）"
           },
           "risk_amount": {
             "type": "number",
             "title": "Risk Amount",
-            "description": "許容損失（円）。口座全体がマイナスなら0"
+            "description": "許容損失（円）= 基準額 × risk_pct%"
           },
           "atr_multiple": {
             "type": "number",
@@ -3138,8 +3170,7 @@
         },
         "type": "object",
         "required": [
-          "equity",
-          "equity_date",
+          "capital",
           "risk_pct",
           "risk_amount",
           "atr_multiple",

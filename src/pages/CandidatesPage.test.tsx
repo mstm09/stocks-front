@@ -9,15 +9,10 @@ const two = [
   indicators({ code: '72030', name: 'トヨタ自動車', close: 2800, atr: 86.8, atr_pct: 3.1 }),
 ]
 
-function mockApi(candidates: Indicators[], equity = 1_000_000) {
+function mockApi(candidates: Indicators[]) {
   return mockFetch((url) => {
     if (url.pathname === '/api/candidates') {
-      return json({
-        as_of_date: '2026-08-14',
-        count: candidates.length,
-        sizing: sizing({ equity, risk_amount: Math.max(equity * 0.03, 0) }),
-        candidates,
-      })
+      return json({ as_of_date: '2026-08-14', count: candidates.length, sizing: sizing(), candidates })
     }
     if (url.pathname.endsWith('/chart')) {
       return svgResponse()
@@ -34,7 +29,10 @@ function codesInTable() {
     .map((row) => within(row).getAllByRole('cell')[0].textContent)
 }
 
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => {
+  vi.restoreAllMocks()
+  localStorage.clear() // 基準額は、ブラウザに覚える
+})
 
 test('候補を表で出す', async () => {
   mockApi(two)
@@ -109,14 +107,16 @@ test('APIがエラーを返したら、その内容を出す', async () => {
 })
 
 test('建てられる株数を出し、0株の行はグレーにする（選んでチャートは見られる）', async () => {
+  // 株数は画面で計算する（基準額100万円 × 3% ÷ 2ATR）。APIの max_shares は使わない
   mockApi([
-    indicators({ max_shares: 600 }),
-    indicators({ code: '72030', name: 'トヨタ自動車', atr: 160, max_shares: 0 }),
+    indicators({ max_shares: 999 }), // ATR 24.3円 → 30,000 ÷ 48.6 = 617 → 600株
+    indicators({ code: '72030', name: 'トヨタ自動車', atr: 160 }), // 30,000 ÷ 320 = 93 → 0株
   ])
   renderApp('/candidates')
   await screen.findByText('日本取引所グループ')
 
-  expect(screen.getByText(/口座全体 1,000,000円 × 3% ＝ 許容損失 30,000円/)).toBeInTheDocument()
+  expect(screen.getByLabelText('株数の基準額')).toHaveValue(100)
+  expect(screen.getByText(/× 3% ＝ 許容損失 3万円 ÷ 2ATR/)).toBeInTheDocument()
   const jpx = screen.getByText('日本取引所グループ').closest('tr')!
   const toyota = screen.getByText('トヨタ自動車').closest('tr')!
   expect(within(jpx).getByText('600')).toBeInTheDocument()
@@ -131,11 +131,32 @@ test('建てられる株数を出し、0株の行はグレーにする（選ん�
   expect(codesInTable()).toEqual(['7203', '8697']) // 少ない順
 })
 
-test('入出金がないときは、登録を促す', async () => {
-  mockApi([indicators({ max_shares: 0 })], 0)
-  renderApp('/candidates')
-  expect(await screen.findByText(/口座全体が0円のため/)).toBeInTheDocument()
-  expect(screen.getByRole('link', { name: '入出金を登録' })).toHaveAttribute('href', '/portfolio')
+test('基準額を変えると、すぐ株数とグレーが変わり、次に開いたときも覚えている', async () => {
+  mockApi([indicators(), indicators({ code: '72030', name: 'トヨタ自動車', atr: 160 })])
+  const { unmount } = renderApp('/candidates')
+  await screen.findByText('日本取引所グループ')
+
+  const input = screen.getByLabelText('株数の基準額')
+  await userEvent.clear(input)
+  expect(screen.getByText('基準額を入れると、建てられる株数を計算します')).toBeInTheDocument()
+  await userEvent.type(input, '200')
+  // 200万円 × 3% = 6万円。トヨタ 60,000 ÷ 320 = 187 → 100株、JPX 60,000 ÷ 48.6 = 1,234 → 1,200株
+  expect(screen.getByText(/許容損失 6万円/)).toBeInTheDocument()
+  const toyota = screen.getByText('トヨタ自動車').closest('tr')!
+  expect(within(toyota).getByText('100')).toBeInTheDocument()
+  expect(toyota).not.toHaveAttribute('data-cannot-open')
+  expect(within(screen.getByText('日本取引所グループ').closest('tr')!).getByText('1,200')).toBeInTheDocument()
+
+  unmount()
+  renderApp('/candidates') // URLに capital がなくても、前に入れた値を使う
+  expect(await screen.findByLabelText('株数の基準額')).toHaveValue(200)
+})
+
+test('URLの基準額を使う', async () => {
+  mockApi([indicators()])
+  renderApp('/candidates?capital=50')
+  expect(await screen.findByLabelText('株数の基準額')).toHaveValue(50)
+  expect(screen.getByText(/許容損失 1.5万円/)).toBeInTheDocument()
 })
 
 const STOPS = {
