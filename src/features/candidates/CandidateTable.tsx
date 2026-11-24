@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Button } from '@/components/ui/button'
 import { formatCode, formatPrice, formatShares, formatZone } from '@/lib/format'
 import {
   Table,
@@ -38,6 +39,8 @@ type Props = {
   candidates: Indicators[]
   selectedCode: string | undefined
   onSelect: (code: string) => void
+  /** 「注文」ボタンを押したとき */
+  onOrder: (stock: Indicators) => void
 }
 
 /**
@@ -45,7 +48,7 @@ type Props = {
  * 建てられる株数が0の行（口座の3%ルールでは建てられない）は、背景を薄いグレーにする。
  * グレーの行も、選んでチャートを見ることはできる。
  */
-export function CandidateTable({ candidates, selectedCode, onSelect }: Props) {
+export function CandidateTable({ candidates, selectedCode, onSelect, onOrder }: Props) {
   // useState: 画面が覚えておく値。変えると、画面が描き直される。
   const [sort, setSort] = useState<Sort>({ key: 'code', desc: false })
 
@@ -84,6 +87,9 @@ export function CandidateTable({ candidates, selectedCode, onSelect }: Props) {
                 )}
               </TableHead>
             ))}
+            <TableHead className="h-9">
+              <span className="sr-only">操作</span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -115,6 +121,20 @@ export function CandidateTable({ candidates, selectedCode, onSelect }: Props) {
                 <TableCell>{formatZone(c.range_zone)}</TableCell>
                 <TableCell className="text-right">{formatPrice(c.atr)}</TableCell>
                 <TableCell className="text-right">{formatShares(c.max_shares)}</TableCell>
+                <TableCell className="py-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    aria-label={`${formatCode(c.code)}を注文`}
+                    onClick={(e) => {
+                      e.stopPropagation() // 行の選択（チャート表示）は、別にする
+                      onOrder(c)
+                    }}
+                  >
+                    注文
+                  </Button>
+                </TableCell>
               </TableRow>
             )
           })}

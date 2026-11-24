@@ -5,6 +5,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Plugin } from 'vite'
 import { chartSvg, findStock, indicatorsOf, LATEST_DATE, SECTOR17, STOCKS } from './data.ts'
 import { breadth, sectors } from './market.ts'
+import * as orders from './orders.ts'
 import * as trades from './trades.ts'
 import { maxShares } from '../src/lib/sizing.ts'
 
@@ -62,6 +63,11 @@ async function handle(req: IncomingMessage, url: URL): Promise<Result> {
     const indicators = stock && indicatorsOf(stock, asOf)
     return indicators ? { body: indicators } : notFound(`${m[1]} の ${asOf} の指標がありません`)
   }
+  if ((m = path.match(/^\/stocks\/([^/]+)\/stop-candidates$/))) {
+    const entry = query.get('entry_price')
+    const result = orders.stopCandidates(m[1], asOf, entry == null ? null : Number(entry))
+    return result ? { body: result } : notFound(`${m[1]} の ${asOf} の指標がありません`)
+  }
   if ((m = path.match(/^\/stocks\/([^/]+)\/chart$/))) {
     const stock = findStock(m[1])
     const svg = stock && chartSvg(stock, asOf)
@@ -91,6 +97,22 @@ async function handle(req: IncomingMessage, url: URL): Promise<Result> {
   }
   if ((m = path.match(/^\/trades\/(\d+)\/exits\/(\d+)$/)) && method === 'DELETE') {
     return { body: trades.deleteExit(Number(m[1]), Number(m[2])) }
+  }
+  if (path === '/orders' && method === 'GET') return { body: orders.listOrders(query.get('status')) }
+  if (path === '/orders' && method === 'POST') {
+    return { status: 201, body: orders.addOrder(await readJson(req)) }
+  }
+  if ((m = path.match(/^\/orders\/(\d+)$/))) {
+    const id = Number(m[1])
+    if (method === 'GET') return { body: orders.getOrder(id) }
+    if (method === 'PATCH') return { body: orders.updateOrder(id, await readJson(req)) }
+    if (method === 'DELETE') return (orders.deleteOrder(id), { status: 204 })
+  }
+  if ((m = path.match(/^\/orders\/(\d+)\/fill$/)) && method === 'POST') {
+    return { status: 201, body: orders.fillOrder(Number(m[1]), await readJson(req)) }
+  }
+  if ((m = path.match(/^\/orders\/(\d+)\/cancel$/)) && method === 'POST') {
+    return { body: orders.cancelOrder(Number(m[1]), await readJson(req)) }
   }
   if (path === '/cash' && method === 'GET') return { body: trades.listCash() }
   if (path === '/cash' && method === 'POST') {

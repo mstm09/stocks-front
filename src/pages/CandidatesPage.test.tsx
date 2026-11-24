@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Indicators } from '@/features/stocks/api'
 import { indicators, sizing, svgResponse } from '@/test/fixtures'
-import { json, mockFetch, renderApp } from '@/test/render'
+import { json, mockFetch, renderApp, type SentRequest } from '@/test/render'
 
 const two = [
   indicators(),
@@ -136,4 +136,90 @@ test('入出金がないときは、登録を促す', async () => {
   renderApp('/candidates')
   expect(await screen.findByText(/口座全体が0円のため/)).toBeInTheDocument()
   expect(screen.getByRole('link', { name: '入出金を登録' })).toHaveAttribute('href', '/portfolio')
+})
+
+const STOPS = {
+  code: '86970',
+  as_of_date: '2026-08-14',
+  entry_price: 1215,
+  atr: 24.3,
+  range_low: 1239.3,
+  range_high: 1263.6,
+  lookback_days: 15,
+  candidates: [
+    { price: 1240, target_multiple: 1, atr_multiple: 1.03, distance: 25, bar_date: '2026-08-05', bar_high: 1239 },
+    { price: 1251, target_multiple: 1.5, atr_multiple: 1.48, distance: 36, bar_date: '2026-08-07', bar_high: 1250 },
+    { price: 1263, target_multiple: 2, atr_multiple: 1.98, distance: 48, bar_date: '2026-07-30', bar_high: 1262.5 },
+  ],
+}
+
+test('注文ボタンで、ロスカット候補と株数つきの注文を登録できる', async () => {
+  const sent: SentRequest[] = []
+  mockFetch((url, req) => {
+    if (url.pathname === '/api/candidates') {
+      return json({
+        as_of_date: '2026-08-14',
+        count: 1,
+        sizing: sizing(),
+        candidates: [indicators({ max_shares: 600 })],
+      })
+    }
+    if (url.pathname === '/api/stocks/86970/stop-candidates') {
+      expect(url.searchParams.get('entry_price')).toBe('1215') // 初期値は終値
+      return json(STOPS)
+    }
+    if (url.pathname === '/api/orders' && req.method === 'POST') {
+      sent.push(req)
+      return json({ id: 7, code: '86970', name: '日本取引所グループ', quantity: 600, order_price: 1215 }, 201)
+    }
+    if (url.pathname.endsWith('/chart')) return svgResponse()
+    return undefined
+  })
+  renderApp('/candidates')
+  await userEvent.click(await screen.findByRole('button', { name: '8697を注文' }))
+
+  const dialog = await screen.findByRole('dialog')
+  expect(within(dialog).getByLabelText(/注文価格/)).toHaveValue(1215)
+  expect(within(dialog).getByLabelText(/株数/)).toHaveValue(600) // 初期値は建てられる株数
+  // ロスカット未入力: 2ATR（48.6円）で計算 → 30,000 ÷ 48.6 = 617 → 600株
+  expect(within(dialog).getByTestId('max-shares')).toHaveTextContent('最大 600株')
+
+  await userEvent.click(await within(dialog).findByRole('button', { name: /1.5ATR付近 1,251円/ }))
+  expect(within(dialog).getByLabelText(/ロスカット（円）/)).toHaveValue(1251)
+  expect(within(dialog).getByLabelText(/ロスカットの根拠/)).toHaveValue(
+    '2026-08-07 の陰線の高値 1,250 の1ティック上（1.48ATR）',
+  )
+  // ロスカットとの差 36円 → 30,000 ÷ 36 = 833 → 800株。600株なら想定損失 21,600円
+  expect(within(dialog).getByTestId('max-shares')).toHaveTextContent('最大 800株')
+  expect(within(dialog).getByText('想定損失 21,600円')).toBeInTheDocument()
+
+  await userEvent.click(within(dialog).getByRole('button', { name: '注文を登録する' }))
+  expect(await screen.findByRole('status')).toHaveTextContent('注文 #7')
+  expect(sent[0].body).toMatchObject({
+    code: '86970',
+    kind: 'MARGIN_SHORT',
+    quantity: 600,
+    order_price: 1215,
+    stop_loss_price: 1251,
+    expires_on: null,
+  })
+})
+
+test('ロスカットが遠すぎて許容損失を超えると、警告する', async () => {
+  mockFetch((url) => {
+    if (url.pathname === '/api/candidates') {
+      return json({ as_of_date: '2026-08-14', count: 1, sizing: sizing(), candidates: [indicators({ max_shares: 600 })] })
+    }
+    if (url.pathname.endsWith('/stop-candidates')) return json({ ...STOPS, candidates: [] })
+    return undefined
+  })
+  renderApp('/candidates')
+  await userEvent.click(await screen.findByRole('button', { name: '8697を注文' }))
+  const dialog = await screen.findByRole('dialog')
+  expect(await within(dialog).findByText(/候補なし/)).toBeInTheDocument()
+
+  await userEvent.type(within(dialog).getByLabelText(/ロスカット（円）/), '1315') // 差 100円 → 最大300株
+  expect(within(dialog).getByTestId('max-shares')).toHaveTextContent(
+    '最大 300株（許容損失 30,000円 ÷ ロスカットまで 100円） 想定損失が許容損失を超えています',
+  )
 })
