@@ -9,11 +9,14 @@ type TradeOut = Schemas['TradeOut']
 type Kind = Schemas['TradeIn']['kind']
 
 type Exit = { id: number; closed_on: string; quantity: number; price: number; fee: number; memo: string | null }
-type Trade = Required<Schemas['TradeIn']> & {
+type Stop = { id: number; changed_on: string; price: number | null; reason: string | null; memo: string | null }
+type Trade = Omit<Required<Schemas['TradeIn']>, 'stop_loss_price' | 'stop_loss_reason'> & {
   id: number
   self_score: number | null
   self_review: string | null
   exits: Exit[]
+  /** ロスカットの履歴（古い順）。いちばん新しい行が今のロスカット */
+  stops: Stop[]
 }
 type Cash = Schemas['CashOut']
 
@@ -37,19 +40,25 @@ let nextId = 100
 const trades: Trade[] = [
   {
     id: 1, code: '86970', kind: 'MARGIN_SHORT', opened_on: '2026-10-05', quantity: 300,
-    entry_price: 1620, entry_fee: 0, stop_loss_price: 1700, stop_loss_reason: '直近の戻り高値の上',
+    entry_price: 1620, entry_fee: 0,
+    stops: [
+      { id: 1, changed_on: '2026-10-05', price: 1700, reason: '直近の戻り高値の上', memo: null },
+      { id: 2, changed_on: '2026-10-28', price: 1600, reason: '一部利確のあと、建値の少し下へ', memo: '手動のトレイリング' },
+    ],
     limit_price: 1450, limit_quantity: null, memo: '60日線で頭を押さえられた', self_score: null, self_review: null,
     exits: [{ id: 1, closed_on: '2026-10-28', quantity: 100, price: 1540, fee: 300, memo: '一部を利益確定' }],
   },
   {
     id: 2, code: '67580', kind: 'MARGIN_SHORT', opened_on: '2026-09-10', quantity: 100,
-    entry_price: 3900, entry_fee: 0, stop_loss_price: 4050, stop_loss_reason: '25日線の上',
+    entry_price: 3900, entry_fee: 0,
+    stops: [{ id: 3, changed_on: '2026-09-10', price: 4050, reason: '25日線の上', memo: null }],
     limit_price: null, limit_quantity: null, memo: null, self_score: 70, self_review: '損切りは計画どおり。利確が早すぎた',
     exits: [{ id: 2, closed_on: '2026-10-01', quantity: 100, price: 3700, fee: 500, memo: null }],
   },
   {
     id: 3, code: '72030', kind: 'SPOT', opened_on: '2026-08-20', quantity: 100,
-    entry_price: 4200, entry_fee: 0, stop_loss_price: 4000, stop_loss_reason: '25日線の下',
+    entry_price: 4200, entry_fee: 0,
+    stops: [{ id: 4, changed_on: '2026-08-20', price: 4000, reason: '25日線の下', memo: null }],
     limit_price: null, limit_quantity: null, memo: '上昇トレンドの押し目', self_score: null, self_review: null, exits: [],
   },
 ]
@@ -64,19 +73,21 @@ function toOut(t: Trade): TradeOut {
   }))
   const remaining = t.quantity - exits.reduce((a, e) => a + e.quantity, 0)
   const realized = exits.reduce((a, e) => a + e.pnl, 0) - t.entry_fee
-  const risk = t.stop_loss_price == null ? null : Math.abs(t.entry_price - t.stop_loss_price) * t.quantity
+  const first = [...t.stops].sort((a, b) => a.changed_on.localeCompare(b.changed_on) || a.id - b.id)[0]?.price
+  const risk = first == null ? null : Math.abs(t.entry_price - first) * t.quantity
   const closed = remaining === 0
-  const stop = t.stop_loss_price
-  // ロスカットの履歴は、仮のデータでは「新規の日に設定した1行」だけにする（変更は上書き）
-  const stopChanges =
-    stop == null
-      ? []
-      : [{ id: t.id, changed_on: t.opened_on, price: stop, previous_price: null, reason: t.stop_loss_reason, memo: null }]
+  const stops = [...t.stops].sort((a, b) => a.changed_on.localeCompare(b.changed_on) || a.id - b.id)
+  const current = stops.at(-1)
+  const stop = current?.price ?? null
+  const initial = stops[0]?.price ?? null
+  const { stops: _, ...rest } = t
   return {
-    ...t,
-    initial_stop_price: stop,
+    ...rest,
+    stop_loss_price: stop,
+    stop_loss_reason: current?.reason ?? null,
+    initial_stop_price: initial,
     stop_pnl: stop == null || closed ? null : (stop - t.entry_price) * remaining * direction(t.kind),
-    stop_changes: stopChanges,
+    stop_changes: stops.map((s, i) => ({ ...s, previous_price: i === 0 ? null : stops[i - 1].price })),
     name: findStock(t.code)?.name ?? null,
     kind_label: KIND_LABELS[t.kind],
     status: closed ? 'CLOSED' : 'OPEN',
@@ -114,9 +125,14 @@ export function addTrade(body: Schemas['TradeIn']): TradeOut {
   // 銘柄コードは4桁でも受け付けて、5桁にそろえる
   const code = body.code.length === 4 ? `${body.code}0` : body.code
   checkStop(body.kind, body.entry_price, body.stop_loss_price)
+  const { stop_loss_price, stop_loss_reason, ...rest } = body
+  const id = nextId++
   const trade: Trade = {
-    entry_fee: 0, stop_loss_price: null, stop_loss_reason: null, limit_price: null, limit_quantity: null, memo: null,
-    ...body, code, id: nextId++, self_score: null, self_review: null, exits: [],
+    entry_fee: 0, limit_price: null, limit_quantity: null, memo: null,
+    ...rest, code, id, self_score: null, self_review: null, exits: [],
+    stops: stop_loss_price == null
+      ? []
+      : [{ id: nextId++, changed_on: body.opened_on, price: stop_loss_price, reason: stop_loss_reason ?? null, memo: null }],
   }
   trades.push(trade)
   return toOut(trade)
@@ -124,10 +140,35 @@ export function addTrade(body: Schemas['TradeIn']): TradeOut {
 
 export function updateTrade(id: number, body: Schemas['TradeUpdate']): TradeOut {
   const trade = find(id)
-  if ('stop_loss_price' in body) checkStop(trade.kind, trade.entry_price, body.stop_loss_price)
-  const { entry_fee, ...rest } = body
+  const { entry_fee, stop_loss_price, stop_loss_reason, ...rest } = body
   Object.assign(trade, rest)
   if (entry_fee != null) trade.entry_fee = entry_fee
+  // ロスカットを送ったら、今日（仮のデータの最新日）の変更として履歴に1行足す
+  if (stop_loss_price !== undefined || stop_loss_reason !== undefined) {
+    const now = toOut(trade)
+    addStop(id, {
+      changed_on: LATEST_DATE,
+      price: stop_loss_price === undefined ? now.stop_loss_price : stop_loss_price,
+      reason: stop_loss_reason === undefined ? now.stop_loss_reason : stop_loss_reason,
+    })
+  }
+  return toOut(trade)
+}
+
+/** ロスカットの設定・変更を、履歴に1行足す。最初のロスカットだけは損をする側に限る。 */
+export function addStop(id: number, body: Schemas['StopChangeIn']): TradeOut {
+  const trade = find(id)
+  if (trade.stops.length === 0) checkStop(trade.kind, trade.entry_price, body.price)
+  if (body.changed_on < trade.opened_on) throw new MockError(400, '変えた日が、新規の日より前です')
+  trade.stops.push({ id: nextId++, changed_on: body.changed_on, price: body.price, reason: body.reason ?? null, memo: body.memo ?? null })
+  return toOut(trade)
+}
+
+export function deleteStop(id: number, stopId: number): TradeOut {
+  const trade = find(id)
+  const index = trade.stops.findIndex((s) => s.id === stopId)
+  if (index < 0) throw new MockError(404, `売買 ${id} に、ロスカットの履歴 ${stopId} がありません`)
+  trade.stops.splice(index, 1)
   return toOut(trade)
 }
 

@@ -5,13 +5,14 @@ import { NativeSelect } from '@/components/NativeSelect'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { today } from '@/lib/date'
-import { formatYen } from '@/lib/format'
+import { formatPnl, formatPrice, formatYen } from '@/lib/format'
 import { fromNumber, toNumber, toText } from '@/lib/number'
 import {
   KIND_LABELS,
   type Trade,
   type TradeKind,
   useAddExit,
+  useAddStopChange,
   useAddTrade,
   useDeleteTrade,
   useUpdateTrade,
@@ -39,6 +40,7 @@ export function AddTradeDialog({
     stop_loss_price: '',
     stop_loss_reason: '',
     limit_price: '',
+    limit_quantity: '',
     memo: '',
   })
   // 1項目だけを書き換える（ほかの項目はそのまま）
@@ -63,6 +65,7 @@ export function AddTradeDialog({
         stop_loss_price: toNumber(form.stop_loss_price),
         stop_loss_reason: toText(form.stop_loss_reason),
         limit_price: toNumber(form.limit_price),
+        limit_quantity: toNumber(form.limit_quantity),
         memo: toText(form.memo),
       },
       { onSuccess: onAdded },
@@ -114,6 +117,9 @@ export function AddTradeDialog({
         </Field>
         <Field htmlFor="trade-limit" label="指値（円）" hint="利益確定などの注文価格">
           <Input id="trade-limit" type="number" step="any" min="0" value={form.limit_price} onChange={set('limit_price')} />
+        </Field>
+        <Field htmlFor="trade-limit-quantity" label="指値の株数" hint="空なら全部">
+          <Input id="trade-limit-quantity" type="number" min="1" value={form.limit_quantity} onChange={set('limit_quantity')} />
         </Field>
         <Field htmlFor="trade-stop-reason" label="ロスカットの根拠" className="col-span-2">
           <Input id="trade-stop-reason" value={form.stop_loss_reason} onChange={set('stop_loss_reason')} />
@@ -186,12 +192,14 @@ export function AddExitDialog({ trade, onClose }: DialogProps & { trade: Trade }
   )
 }
 
-/** ロスカット・指値・メモ・新規の費用を変える。 */
+/**
+ * 指値（と株数）・メモ・新規の費用を変える。
+ * ロスカットは履歴で持つので、ここでは変えない（「ロスカットを動かす」から）。
+ */
 export function EditPlanDialog({ trade, onClose }: DialogProps & { trade: Trade }) {
   const [form, setForm] = useState({
-    stop_loss_price: fromNumber(trade.stop_loss_price),
-    stop_loss_reason: trade.stop_loss_reason ?? '',
     limit_price: fromNumber(trade.limit_price),
+    limit_quantity: fromNumber(trade.limit_quantity),
     memo: trade.memo ?? '',
     entry_fee: fromNumber(trade.entry_fee),
   })
@@ -203,9 +211,8 @@ export function EditPlanDialog({ trade, onClose }: DialogProps & { trade: Trade 
     update.mutate(
       {
         // null を送ると、その項目が消える
-        stop_loss_price: toNumber(form.stop_loss_price),
-        stop_loss_reason: toText(form.stop_loss_reason),
         limit_price: toNumber(form.limit_price),
+        limit_quantity: toNumber(form.limit_quantity),
         memo: toText(form.memo),
         entry_fee: toNumber(form.entry_fee) ?? 0,
       },
@@ -217,28 +224,94 @@ export function EditPlanDialog({ trade, onClose }: DialogProps & { trade: Trade 
     <FormDialog
       open
       onOpenChange={onClose}
-      title="ロスカット・指値・メモを変える"
-      description="空にした項目は、消えます。株数・価格・日付・種類は変えられません。"
+      title="指値・メモを変える"
+      description="空にした項目は、消えます。ロスカットは「ロスカットを動かす」から変えます（履歴に残ります）。"
       submitLabel="保存する"
       pending={update.isPending}
       error={update.error}
       onSubmit={submit}
     >
       <div className="grid grid-cols-2 gap-3">
-        <Field htmlFor="plan-stop" label="ロスカット（円）">
-          <Input id="plan-stop" type="number" step="any" min="0" value={form.stop_loss_price} onChange={set('stop_loss_price')} />
-        </Field>
         <Field htmlFor="plan-limit" label="指値（円）">
           <Input id="plan-limit" type="number" step="any" min="0" value={form.limit_price} onChange={set('limit_price')} />
         </Field>
-        <Field htmlFor="plan-stop-reason" label="ロスカットの根拠" className="col-span-2">
-          <Input id="plan-stop-reason" value={form.stop_loss_reason} onChange={set('stop_loss_reason')} />
+        <Field htmlFor="plan-limit-quantity" label="指値の株数" hint="空なら残り全部">
+          <Input id="plan-limit-quantity" type="number" min="1" value={form.limit_quantity} onChange={set('limit_quantity')} />
         </Field>
         <Field htmlFor="plan-memo" label="メモ" className="col-span-2">
           <Textarea id="plan-memo" rows={2} value={form.memo} onChange={set('memo')} />
         </Field>
         <Field htmlFor="plan-fee" label="新規の手数料など（円）">
           <Input id="plan-fee" type="number" step="any" min="0" value={form.entry_fee} onChange={set('entry_fee')} />
+        </Field>
+      </div>
+    </FormDialog>
+  )
+}
+
+/**
+ * ロスカットを動かす（手動のトレイリングストップ）。履歴に1行足す。
+ * 最初のロスカットだけは損をする側に限る。そのあとは、建値より利益側にも置ける。
+ */
+export function MoveStopDialog({ trade, onClose }: DialogProps & { trade: Trade }) {
+  const [form, setForm] = useState({ changed_on: today(), price: '', reason: '', memo: '' })
+  const [remove, setRemove] = useState(false)
+  const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
+    setForm((prev) => ({ ...prev, [key]: e.target.value }))
+  const add = useAddStopChange(trade.id)
+
+  // 動かしたあとのロスカットで、残りの株が決済されたときの損益（費用は含まない）
+  const price = toNumber(form.price)
+  const direction = trade.kind === 'MARGIN_SHORT' ? -1 : 1
+  const pnl = remove || price == null ? null : (price - trade.entry_price) * trade.remaining_quantity * direction
+
+  function submit() {
+    add.mutate(
+      {
+        changed_on: form.changed_on,
+        price: remove ? null : price,
+        reason: toText(form.reason),
+        memo: toText(form.memo),
+      },
+      { onSuccess: onClose },
+    )
+  }
+
+  const now = trade.stop_loss_price == null ? 'なし' : `${formatPrice(trade.stop_loss_price)}円`
+  return (
+    <FormDialog
+      open
+      onOpenChange={onClose}
+      title="ロスカットを動かす"
+      description={`今のロスカット: ${now}（新規 ${formatPrice(trade.entry_price)}円・残り ${trade.remaining_quantity}株）。変更は履歴に残ります。`}
+      submitLabel="記録する"
+      pending={add.isPending}
+      error={add.error}
+      onSubmit={submit}
+    >
+      <div className="grid grid-cols-2 gap-3">
+        <Field htmlFor="stop-date" label="変えた日" required>
+          <Input id="stop-date" type="date" value={form.changed_on} onChange={set('changed_on')} required />
+        </Field>
+        <Field
+          htmlFor="stop-price"
+          label="新しいロスカット（円）"
+          hint={pnl == null ? undefined : `ここで決済されると ${formatPnl(pnl)}円${pnl >= 0 ? '（利益を確保）' : ''}`}
+          required={!remove}
+        >
+          <Input id="stop-price" type="number" step="any" min="0" value={form.price} onChange={set('price')} required={!remove} disabled={remove} />
+        </Field>
+        {trade.stop_loss_price != null && (
+          <label className="col-span-2 flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={remove} onChange={(e) => setRemove(e.target.checked)} />
+            ロスカットを外す
+          </label>
+        )}
+        <Field htmlFor="stop-reason" label="根拠" className="col-span-2">
+          <Input id="stop-reason" value={form.reason} onChange={set('reason')} />
+        </Field>
+        <Field htmlFor="stop-memo" label="メモ" className="col-span-2">
+          <Input id="stop-memo" value={form.memo} onChange={set('memo')} />
         </Field>
       </div>
     </FormDialog>

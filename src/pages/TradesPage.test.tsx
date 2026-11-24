@@ -46,6 +46,23 @@ function mockTradesApi(initial: Trade[]) {
         exits: [{ id: 1, closed_on: body.closed_on, quantity: 300, price: body.price, fee: body.fee, pnl: 15000, memo: null }],
       })
     }
+    if (url.pathname.endsWith('/stops') && request.method === 'POST') {
+      // 本物のAPIと同じく、履歴に1行足し、いちばん新しい行を今のロスカットにする
+      const last = current.stop_changes.at(-1)
+      const row = { id: 50 + current.stop_changes.length, changed_on: body.changed_on, price: body.price, previous_price: last?.price ?? null, reason: body.reason, memo: body.memo }
+      const price = body.price as number | null
+      return replace({
+        ...current,
+        stop_loss_price: price,
+        stop_loss_reason: body.reason,
+        stop_pnl: price == null ? null : (current.entry_price - price) * current.remaining_quantity,
+        stop_changes: [...current.stop_changes, row],
+      })
+    }
+    if (url.pathname.match(/\/stops\/\d+$/) && request.method === 'DELETE') {
+      const rest = current.stop_changes.slice(0, -1)
+      return replace({ ...current, stop_loss_price: rest.at(-1)?.price ?? null, stop_changes: rest })
+    }
     if (request.method === 'PATCH') return replace({ ...current, ...body })
     if (request.method === 'DELETE') {
       trades = trades.filter((t) => t.id !== id)
@@ -265,6 +282,61 @@ test('注文を変える・取り消す', async () => {
   await waitForDialogToClose()
   expect(sent[1]).toMatchObject({ method: 'POST', path: '/api/orders/5/cancel' })
   expect(await screen.findByText(/注文中の注文はありません。/)).toBeInTheDocument()
+})
+
+const FIRST_STOP = { id: 40, changed_on: '2026-08-03', price: 1060, previous_price: null, reason: '直近の戻り高値の上', memo: null }
+
+test('ロスカットを動かすと、履歴に残り、確保できた損益を出す', async () => {
+  const sent = mockTradesApi([trade({ stop_changes: [FIRST_STOP] })])
+  const user = userEvent.setup()
+  renderApp('/trades/1')
+
+  const history = await screen.findByRole('region', { name: 'ロスカットの履歴' })
+  expect(within(history).getByText('1,060円に設定')).toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: 'ロスカットを動かす' }))
+  const dialog = within(await screen.findByRole('dialog', { name: 'ロスカットを動かす' }))
+  await user.type(dialog.getByLabelText(/新しいロスカット/), '980')
+  // 売り建て 1,000円 × 300株。980円で決済されると +6,000円
+  expect(dialog.getByText('ここで決済されると +6,000円（利益を確保）')).toBeInTheDocument()
+  await user.type(dialog.getByLabelText('根拠'), '25日線の上')
+  await user.click(dialog.getByRole('button', { name: '記録する' }))
+
+  expect(await within(history).findByText('1,060円 → 980円')).toBeInTheDocument()
+  expect(screen.getByText('利益を確保できている')).toBeInTheDocument()
+  expect(screen.getByText('最初のロスカット')).toBeInTheDocument() // 想定損失の基準は最初の 1,060円
+  expect(sent[0]).toMatchObject({ method: 'POST', path: '/api/trades/1/stops', body: { price: 980, reason: '25日線の上', memo: null } })
+
+  await user.click(within(history).getAllByRole('button', { name: /ロスカットの変更を消す/ })[1])
+  await vi.waitFor(() => expect(within(history).queryByText('1,060円 → 980円')).not.toBeInTheDocument())
+  expect(sent[1]).toMatchObject({ method: 'DELETE', path: '/api/trades/1/stops/51' })
+})
+
+test('ロスカットを外す', async () => {
+  const sent = mockTradesApi([trade({ stop_changes: [FIRST_STOP] })])
+  const user = userEvent.setup()
+  renderApp('/trades/1')
+  await user.click(await screen.findByRole('button', { name: 'ロスカットを動かす' }))
+  const dialog = within(await screen.findByRole('dialog', { name: 'ロスカットを動かす' }))
+  await user.click(dialog.getByLabelText('ロスカットを外す'))
+  expect(dialog.getByLabelText(/新しいロスカット/)).toBeDisabled()
+  await user.click(dialog.getByRole('button', { name: '記録する' }))
+  expect(await screen.findByText('1,060円 → 外した')).toBeInTheDocument()
+  expect(sent[0]).toMatchObject({ body: { price: null } })
+})
+
+test('指値の株数を変える（ロスカットはこのフォームでは変えない）', async () => {
+  const sent = mockTradesApi([trade()])
+  const user = userEvent.setup()
+  renderApp('/trades/1')
+  await user.click(await screen.findByRole('button', { name: '指値・メモを変える' }))
+  const dialog = within(await screen.findByRole('dialog', { name: '指値・メモを変える' }))
+  expect(dialog.queryByLabelText(/ロスカット/)).not.toBeInTheDocument()
+  await user.type(dialog.getByLabelText('指値の株数'), '100')
+  await user.click(dialog.getByRole('button', { name: '保存する' }))
+  expect(await screen.findByText('900円（100株）')).toBeInTheDocument()
+  expect(sent[0]).toMatchObject({ method: 'PATCH', body: { limit_price: 900, limit_quantity: 100 } })
+  expect(sent[0].body).not.toHaveProperty('stop_loss_price')
 })
 
 async function waitForDialogToClose() {
