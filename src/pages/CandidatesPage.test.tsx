@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Indicators } from '@/features/stocks/api'
-import { indicators, svgResponse } from '@/test/fixtures'
+import { indicators, sizing, svgResponse } from '@/test/fixtures'
 import { json, mockFetch, renderApp } from '@/test/render'
 
 const two = [
@@ -9,10 +9,15 @@ const two = [
   indicators({ code: '72030', name: 'トヨタ自動車', close: 2800, atr: 86.8, atr_pct: 3.1 }),
 ]
 
-function mockApi(candidates: Indicators[]) {
+function mockApi(candidates: Indicators[], equity = 1_000_000) {
   return mockFetch((url) => {
     if (url.pathname === '/api/candidates') {
-      return json({ as_of_date: '2026-08-14', count: candidates.length, candidates })
+      return json({
+        as_of_date: '2026-08-14',
+        count: candidates.length,
+        sizing: sizing({ equity, risk_amount: Math.max(equity * 0.03, 0) }),
+        candidates,
+      })
     }
     if (url.pathname.endsWith('/chart')) {
       return svgResponse()
@@ -101,4 +106,34 @@ test('APIがエラーを返したら、その内容を出す', async () => {
   mockFetch(() => json({ detail: '指標がありません。先に calc-indicators を実行してください' }, 404))
   renderApp('/candidates')
   expect(await screen.findByRole('alert')).toHaveTextContent('指標がありません')
+})
+
+test('建てられる株数を出し、0株の行はグレーにする（選んでチャートは見られる）', async () => {
+  mockApi([
+    indicators({ max_shares: 600 }),
+    indicators({ code: '72030', name: 'トヨタ自動車', atr: 160, max_shares: 0 }),
+  ])
+  renderApp('/candidates')
+  await screen.findByText('日本取引所グループ')
+
+  expect(screen.getByText(/口座全体 1,000,000円 × 3% ＝ 許容損失 30,000円/)).toBeInTheDocument()
+  const jpx = screen.getByText('日本取引所グループ').closest('tr')!
+  const toyota = screen.getByText('トヨタ自動車').closest('tr')!
+  expect(within(jpx).getByText('600')).toBeInTheDocument()
+  expect(jpx).not.toHaveAttribute('data-cannot-open')
+  expect(toyota).toHaveAttribute('data-cannot-open', 'true')
+
+  await userEvent.click(toyota)
+  expect(toyota).toHaveAttribute('aria-selected', 'true')
+  expect(await screen.findByRole('img')).toBeInTheDocument() // チャートは出る
+
+  await userEvent.click(screen.getByRole('button', { name: /株数/ }))
+  expect(codesInTable()).toEqual(['7203', '8697']) // 少ない順
+})
+
+test('入出金がないときは、登録を促す', async () => {
+  mockApi([indicators({ max_shares: 0 })], 0)
+  renderApp('/candidates')
+  expect(await screen.findByText(/口座全体が0円のため/)).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: '入出金を登録' })).toHaveAttribute('href', '/portfolio')
 })

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { formatCode, formatPrice, formatZone } from '@/lib/format'
+import { formatCode, formatPrice, formatShares, formatZone } from '@/lib/format'
 import {
   Table,
   TableBody,
@@ -11,7 +11,7 @@ import {
 import type { Indicators } from '@/features/stocks/api'
 import { cn } from '@/lib/utils'
 
-type SortKey = 'code' | 'close' | 'atr'
+type SortKey = 'code' | 'close' | 'atr' | 'max_shares'
 type Sort = { key: SortKey; desc: boolean }
 
 /** 表の列。並べ替えできる列には sortKey を付ける。 */
@@ -26,6 +26,12 @@ const COLUMNS: { label: string; title?: string; sortKey?: SortKey; numeric?: boo
   { label: '26週', title: '週足26週の移動平均', numeric: true },
   { label: '価格帯', title: '直近の高値〜安値を3等分したときの、現在の位置' },
   { label: 'ATR', title: '1日の値幅の平均（円）', sortKey: 'atr', numeric: true },
+  {
+    label: '株数',
+    title: '1回の損失を口座の3%に収めて建てられる株数（2ATRで計算、100株単位）',
+    sortKey: 'max_shares',
+    numeric: true,
+  },
 ]
 
 type Props = {
@@ -34,7 +40,11 @@ type Props = {
   onSelect: (code: string) => void
 }
 
-/** 売り建て候補の表。見出しを押すと並べ替え、行を押すと選択する。 */
+/**
+ * 売り建て候補の表。見出しを押すと並べ替え、行を押すと選択する。
+ * 建てられる株数が0の行（口座の3%ルールでは建てられない）は、背景を薄いグレーにする。
+ * グレーの行も、選んでチャートを見ることはできる。
+ */
 export function CandidateTable({ candidates, selectedCode, onSelect }: Props) {
   // useState: 画面が覚えておく値。変えると、画面が描き直される。
   const [sort, setSort] = useState<Sort>({ key: 'code', desc: false })
@@ -79,13 +89,20 @@ export function CandidateTable({ candidates, selectedCode, onSelect }: Props) {
         <TableBody>
           {rows.map((c) => {
             const selected = c.code === selectedCode
+            const cannotOpen = c.max_shares === 0
             return (
               <TableRow
                 key={c.code}
                 onClick={() => onSelect(c.code)}
                 aria-selected={selected}
                 data-state={selected ? 'selected' : undefined}
-                className="cursor-pointer"
+                data-cannot-open={cannotOpen || undefined}
+                title={cannotOpen ? '口座の3%ルールでは建てられません（2ATRで100株未満）' : undefined}
+                className={cn(
+                  'cursor-pointer',
+                  cannotOpen &&
+                    'bg-neutral-200/70 text-muted-foreground hover:bg-neutral-200 data-[state=selected]:bg-neutral-300/70 dark:bg-neutral-800/70 dark:hover:bg-neutral-800',
+                )}
               >
                 <TableCell className="font-mono">{formatCode(c.code)}</TableCell>
                 <TableCell className="max-w-40 truncate">{c.name ?? '-'}</TableCell>
@@ -97,6 +114,7 @@ export function CandidateTable({ candidates, selectedCode, onSelect }: Props) {
                 <TableCell className="text-right">{formatPrice(c.wma26)}</TableCell>
                 <TableCell>{formatZone(c.range_zone)}</TableCell>
                 <TableCell className="text-right">{formatPrice(c.atr)}</TableCell>
+                <TableCell className="text-right">{formatShares(c.max_shares)}</TableCell>
               </TableRow>
             )
           })}

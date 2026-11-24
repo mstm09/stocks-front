@@ -38,19 +38,19 @@ const trades: Trade[] = [
   {
     id: 1, code: '86970', kind: 'MARGIN_SHORT', opened_on: '2026-10-05', quantity: 300,
     entry_price: 1620, entry_fee: 0, stop_loss_price: 1700, stop_loss_reason: '直近の戻り高値の上',
-    limit_price: 1450, memo: '60日線で頭を押さえられた', self_score: null, self_review: null,
+    limit_price: 1450, limit_quantity: null, memo: '60日線で頭を押さえられた', self_score: null, self_review: null,
     exits: [{ id: 1, closed_on: '2026-10-28', quantity: 100, price: 1540, fee: 300, memo: '一部を利益確定' }],
   },
   {
     id: 2, code: '67580', kind: 'MARGIN_SHORT', opened_on: '2026-09-10', quantity: 100,
     entry_price: 3900, entry_fee: 0, stop_loss_price: 4050, stop_loss_reason: '25日線の上',
-    limit_price: null, memo: null, self_score: 70, self_review: '損切りは計画どおり。利確が早すぎた',
+    limit_price: null, limit_quantity: null, memo: null, self_score: 70, self_review: '損切りは計画どおり。利確が早すぎた',
     exits: [{ id: 2, closed_on: '2026-10-01', quantity: 100, price: 3700, fee: 500, memo: null }],
   },
   {
     id: 3, code: '72030', kind: 'SPOT', opened_on: '2026-08-20', quantity: 100,
     entry_price: 4200, entry_fee: 0, stop_loss_price: 4000, stop_loss_reason: '25日線の下',
-    limit_price: null, memo: '上昇トレンドの押し目', self_score: null, self_review: null, exits: [],
+    limit_price: null, limit_quantity: null, memo: '上昇トレンドの押し目', self_score: null, self_review: null, exits: [],
   },
 ]
 const cash: Cash[] = [{ id: 1, occurred_on: '2026-08-01', amount: 3_000_000, memo: '入金' }]
@@ -66,8 +66,17 @@ function toOut(t: Trade): TradeOut {
   const realized = exits.reduce((a, e) => a + e.pnl, 0) - t.entry_fee
   const risk = t.stop_loss_price == null ? null : Math.abs(t.entry_price - t.stop_loss_price) * t.quantity
   const closed = remaining === 0
+  const stop = t.stop_loss_price
+  // ロスカットの履歴は、仮のデータでは「新規の日に設定した1行」だけにする（変更は上書き）
+  const stopChanges =
+    stop == null
+      ? []
+      : [{ id: t.id, changed_on: t.opened_on, price: stop, previous_price: null, reason: t.stop_loss_reason, memo: null }]
   return {
     ...t,
+    initial_stop_price: stop,
+    stop_pnl: stop == null || closed ? null : (stop - t.entry_price) * remaining * direction(t.kind),
+    stop_changes: stopChanges,
     name: findStock(t.code)?.name ?? null,
     kind_label: KIND_LABELS[t.kind],
     status: closed ? 'CLOSED' : 'OPEN',
@@ -106,7 +115,7 @@ export function addTrade(body: Schemas['TradeIn']): TradeOut {
   const code = body.code.length === 4 ? `${body.code}0` : body.code
   checkStop(body.kind, body.entry_price, body.stop_loss_price)
   const trade: Trade = {
-    entry_fee: 0, stop_loss_price: null, stop_loss_reason: null, limit_price: null, memo: null,
+    entry_fee: 0, stop_loss_price: null, stop_loss_reason: null, limit_price: null, limit_quantity: null, memo: null,
     ...body, code, id: nextId++, self_score: null, self_review: null, exits: [],
   }
   trades.push(trade)

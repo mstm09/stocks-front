@@ -31,6 +31,8 @@ export interface paths {
         /**
          * Candidates
          * @description 売り建て候補の一覧。各銘柄の指標つき（チャートは `chart_url`）。
+         *
+         *     `max_shares` は、1回の損失を口座全体の決めた%に収めて建てられる株数（`sizing` が前提）。
          */
         get: operations["candidates_candidates_get"];
         put?: never;
@@ -113,6 +115,27 @@ export interface paths {
          * @description ローソク足チャート（日足・移動平均線つき）。Claudeへ渡すのはPNG。
          */
         get: operations["chart_stocks__code__chart_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/stocks/{code}/stop-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stop Candidates
+         * @description 売り建てのロスカット候補。直近の陰線の高値＋1ティックのうち、注文価格 ＋ 1〜2ATR に
+         *     入るものから、1ATR・1.5ATR・2ATR にいちばん近いものを1件ずつ（最大3件）。
+         */
+        get: operations["stop_candidates_stocks__code__stop_candidates_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -245,6 +268,135 @@ export interface paths {
          * @description 決済を1件消す（登録の間違いを直すため）。
          */
         delete: operations["delete_exit_trades__trade_id__exits__exit_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trades/{trade_id}/stops": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Stop Change
+         * @description ロスカットの設定・変更を、履歴に1行足す（手動のトレイリングストップ）。
+         */
+        post: operations["add_stop_change_trades__trade_id__stops_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trades/{trade_id}/stops/{stop_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Stop Change
+         * @description ロスカットの履歴を1行消す（登録の間違いを直すため）。
+         */
+        delete: operations["delete_stop_change_trades__trade_id__stops__stop_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Orders
+         * @description 注文の一覧（注文した日が古い順）。期限切れは、注文中で `is_expired` が true。
+         */
+        get: operations["list_orders_orders_get"];
+        put?: never;
+        /**
+         * Add Order
+         * @description 注文（指値で仕掛け中）を登録する。口座全体・損益には入らない。
+         */
+        post: operations["add_order_orders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orders/{order_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Order */
+        get: operations["get_order_orders__order_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Order
+         * @description 注文を消す（登録の間違いを直すため）。約定して作った売買は残る。
+         */
+        delete: operations["delete_order_orders__order_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Order
+         * @description 注文中の注文を変える。送った項目だけ変わる。
+         */
+        patch: operations["update_order_orders__order_id__patch"];
+        trace?: never;
+    };
+    "/orders/{order_id}/fill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fill Order
+         * @description 約定を登録する。注文の内容で売買を1件作って返す（注文は FILLED になる）。
+         */
+        post: operations["fill_order_orders__order_id__fill_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orders/{order_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Order
+         * @description 注文を取り消す（期限切れの注文も、これで閉じる）。
+         */
+        post: operations["cancel_order_orders__order_id__cancel_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -398,6 +550,7 @@ export interface components {
             as_of_date: string;
             /** Count */
             count: number;
+            sizing: components["schemas"]["SizingOut"];
             /** Candidates */
             candidates: components["schemas"]["Indicators"][];
         };
@@ -612,10 +765,222 @@ export interface components {
              */
             atr_pct?: number | null;
             /**
+             * Max Shares
+             * @description 1回の損失を口座の決めた%（既定3%）に収めて建てられる株数。1株あたりの想定損失を 2ATR として計算し、100株単位で切り捨て。0は建てられない。ATRがなければ null
+             */
+            max_shares?: number | null;
+            /**
              * Chart Url
              * @description チャート画像（PNG）のパス。基準日つき
              */
             chart_url: string;
+        };
+        /** OrderCancelIn */
+        OrderCancelIn: {
+            /**
+             * Cancelled On
+             * @description 取消の日。省略時は今日
+             */
+            cancelled_on?: string | null;
+        };
+        /**
+         * OrderFillIn
+         * @description 約定の登録。注文の内容で売買を1件作る。
+         */
+        OrderFillIn: {
+            /**
+             * Filled On
+             * Format: date
+             * @description 約定日
+             */
+            filled_on: string;
+            /**
+             * Price
+             * @description 約定価格。省略時は注文価格
+             */
+            price?: number | null;
+            /**
+             * Quantity
+             * @description 約定した株数。省略時は注文の株数。減らすと残りは取消扱い（部分約定は扱わない）
+             */
+            quantity?: number | null;
+            /**
+             * Fee
+             * @description 新規の手数料など（円）
+             * @default 0
+             */
+            fee: number;
+        };
+        /**
+         * OrderIn
+         * @description 注文（指値で仕掛け中）の登録。
+         */
+        OrderIn: {
+            /**
+             * Code
+             * @description 銘柄コード（4桁か5桁）
+             * @example 8697
+             */
+            code: string;
+            /**
+             * Kind
+             * @description MARGIN_SHORT=信用売り / MARGIN_LONG=信用買い / SPOT=現物買い
+             * @enum {string}
+             */
+            kind: "MARGIN_SHORT" | "MARGIN_LONG" | "SPOT";
+            /**
+             * Ordered On
+             * Format: date
+             * @description 注文した日
+             */
+            ordered_on: string;
+            /**
+             * Quantity
+             * @description 注文の株数
+             */
+            quantity: number;
+            /**
+             * Order Price
+             * @description 注文価格（仕掛けの指値。円）
+             */
+            order_price: number;
+            /**
+             * Expires On
+             * @description 有効期限（この日まで）
+             */
+            expires_on?: string | null;
+            /**
+             * Stop Loss Price
+             * @description ロスカットの価格。注文価格に対して損をする側に限る
+             */
+            stop_loss_price?: number | null;
+            /**
+             * Stop Loss Reason
+             * @description ロスカットの根拠
+             */
+            stop_loss_reason?: string | null;
+            /**
+             * Limit Price
+             * @description 利確の指値（売買の指値になる）
+             */
+            limit_price?: number | null;
+            /**
+             * Limit Quantity
+             * @description 利確の指値の株数。省略時は全部
+             */
+            limit_quantity?: number | null;
+            /**
+             * Memo
+             * @description 注文の理由などのメモ
+             */
+            memo?: string | null;
+        };
+        /** OrderOut */
+        OrderOut: {
+            /** Id */
+            id: number;
+            /** Code */
+            code: string;
+            /** Name */
+            name: string | null;
+            /** Kind */
+            kind: string;
+            /**
+             * Kind Label
+             * @description 種類の表示名（信用売り など）
+             */
+            kind_label: string;
+            /**
+             * Ordered On
+             * Format: date
+             */
+            ordered_on: string;
+            /** Quantity */
+            quantity: number;
+            /**
+             * Order Price
+             * @description 注文価格（仕掛けの指値）
+             */
+            order_price: number;
+            /** Expires On */
+            expires_on: string | null;
+            /** Stop Loss Price */
+            stop_loss_price: number | null;
+            /** Stop Loss Reason */
+            stop_loss_reason: string | null;
+            /**
+             * Limit Price
+             * @description 利確の指値
+             */
+            limit_price: number | null;
+            /** Limit Quantity */
+            limit_quantity: number | null;
+            /** Memo */
+            memo: string | null;
+            /**
+             * Status
+             * @description PENDING=注文中 / FILLED=約定 / CANCELLED=取消
+             */
+            status: string;
+            /** Status Label */
+            status_label: string;
+            /**
+             * Is Expired
+             * @description 注文中で、有効期限が今日より前
+             */
+            is_expired: boolean;
+            /**
+             * Resolved On
+             * @description 約定・取消の日
+             */
+            resolved_on: string | null;
+            /**
+             * Trade Id
+             * @description 約定して作った売買の番号
+             */
+            trade_id: number | null;
+            /**
+             * Risk Amount
+             * @description 想定損失（円）。|注文価格 − ロスカット| × 株数
+             */
+            risk_amount: number | null;
+            /**
+             * Price
+             * @description 今の終値（調整前）。注文中のときだけ
+             */
+            price: number | null;
+            /**
+             * Price Date
+             * @description その終値の日付
+             */
+            price_date: string | null;
+            /**
+             * To Order Pct
+             * @description 終値から注文価格までの距離（%）。プラスは注文価格が終値より上
+             */
+            to_order_pct: number | null;
+        };
+        /**
+         * OrderUpdate
+         * @description 注文中の注文の変更。送った項目だけ変わる（株数・注文価格以外は null で消える）。
+         */
+        OrderUpdate: {
+            /** Quantity */
+            quantity?: number | null;
+            /** Order Price */
+            order_price?: number | null;
+            /** Expires On */
+            expires_on?: string | null;
+            /** Stop Loss Price */
+            stop_loss_price?: number | null;
+            /** Stop Loss Reason */
+            stop_loss_reason?: string | null;
+            /** Limit Price */
+            limit_price?: number | null;
+            /** Limit Quantity */
+            limit_quantity?: number | null;
+            /** Memo */
+            memo?: string | null;
         };
         /**
          * PortfolioOut
@@ -786,6 +1151,43 @@ export interface components {
             sectors: components["schemas"]["SectorRankItem"][];
         };
         /**
+         * SizingOut
+         * @description 建てられる株数の計算の前提（docs/orders.md §3）。
+         */
+        SizingOut: {
+            /**
+             * Equity
+             * @description 口座全体（円）。現金 ＋ 現物の評価額 ＋ 信用の含み損益
+             */
+            equity: number;
+            /**
+             * Equity Date
+             * Format: date
+             * @description 口座全体を計算した日
+             */
+            equity_date: string;
+            /**
+             * Risk Pct
+             * @description 1回に許す損失（口座全体の%）
+             */
+            risk_pct: number;
+            /**
+             * Risk Amount
+             * @description 許容損失（円）。口座全体がマイナスなら0
+             */
+            risk_amount: number;
+            /**
+             * Atr Multiple
+             * @description 候補一覧での1株あたりの想定損失（ATRの何倍）
+             */
+            atr_multiple: number;
+            /**
+             * Lot Size
+             * @description 単元株数。株数はこの単位で切り捨てる
+             */
+            lot_size: number;
+        };
+        /**
          * StockSummary
          * @description 銘柄マスタの1件（画面の検索結果）。
          */
@@ -823,6 +1225,131 @@ export interface components {
              * @description 上場中か（上場廃止後も残る）
              */
             is_active: boolean;
+        };
+        /** StopCandidateOut */
+        StopCandidateOut: {
+            /**
+             * Price
+             * @description ロスカットの候補（陰線の高値＋1ティック。円）
+             */
+            price: number;
+            /**
+             * Target Multiple
+             * @description どの目標（ATRの何倍）に近いものとして選んだか
+             */
+            target_multiple: number;
+            /**
+             * Atr Multiple
+             * @description 実際の想定損失が、ATRの何倍か
+             */
+            atr_multiple: number;
+            /**
+             * Distance
+             * @description 候補 − 注文価格（1株あたりの想定損失。円）
+             */
+            distance: number;
+            /**
+             * Bar Date
+             * Format: date
+             * @description 元の陰線の日
+             */
+            bar_date: string;
+            /**
+             * Bar High
+             * @description 元の陰線の高値（調整後）
+             */
+            bar_high: number;
+        };
+        /**
+         * StopCandidatesOut
+         * @description 売り建てのロスカット候補（docs/orders.md §2）。
+         */
+        StopCandidatesOut: {
+            /** Code */
+            code: string;
+            /**
+             * As Of Date
+             * Format: date
+             */
+            as_of_date: string;
+            /**
+             * Entry Price
+             * @description 注文価格。省略時は基準日の調整後終値
+             */
+            entry_price: number | null;
+            /**
+             * Atr
+             * @description 基準日のATR（円）
+             */
+            atr: number | null;
+            /**
+             * Range Low
+             * @description 候補の範囲の下限（注文価格 ＋ 1ATR）
+             */
+            range_low: number | null;
+            /**
+             * Range High
+             * @description 候補の範囲の上限（注文価格 ＋ 2ATR）
+             */
+            range_high: number | null;
+            /**
+             * Lookback Days
+             * @description 陰線を探した営業日数
+             */
+            lookback_days: number;
+            /**
+             * Candidates
+             * @description 価格の低い順。最大3件（1ATR・1.5ATR・2ATRに近いもの）。空は候補なし
+             */
+            candidates: components["schemas"]["StopCandidateOut"][];
+        };
+        /**
+         * StopChangeIn
+         * @description ロスカットの設定・変更。最初のロスカットだけは損をする側に限る（そのあとは利益側にも置ける）。
+         */
+        StopChangeIn: {
+            /**
+             * Changed On
+             * Format: date
+             * @description ロスカットを設定・変更した日
+             */
+            changed_on: string;
+            /**
+             * Price
+             * @description ロスカットの価格。null はロスカットを外した
+             */
+            price: number | null;
+            /**
+             * Reason
+             * @description 根拠
+             */
+            reason?: string | null;
+            /** Memo */
+            memo?: string | null;
+        };
+        /** StopChangeOut */
+        StopChangeOut: {
+            /** Id */
+            id: number;
+            /**
+             * Changed On
+             * Format: date
+             */
+            changed_on: string;
+            /**
+             * Price
+             * @description ロスカットの価格。null はロスカットを外した
+             */
+            price: number | null;
+            /**
+             * Previous Price
+             * @description 変える前のロスカット（最初の行は null）
+             */
+            previous_price: number | null;
+            /** Reason */
+            reason: string | null;
+            /** Memo */
+            memo: string | null;
         };
         /**
          * TradeIn
@@ -865,7 +1392,7 @@ export interface components {
             entry_fee: number;
             /**
              * Stop Loss Price
-             * @description ロスカットの価格
+             * @description 最初のロスカットの価格。損をする側に限る
              */
             stop_loss_price?: number | null;
             /**
@@ -878,6 +1405,11 @@ export interface components {
              * @description 指値（利益確定などの注文価格）
              */
             limit_price?: number | null;
+            /**
+             * Limit Quantity
+             * @description 指値の株数。省略時は残り全部
+             */
+            limit_quantity?: number | null;
             /**
              * Memo
              * @description 売買の理由などのメモ
@@ -910,12 +1442,28 @@ export interface components {
             entry_price: number;
             /** Entry Fee */
             entry_fee: number;
-            /** Stop Loss Price */
+            /**
+             * Stop Loss Price
+             * @description 今のロスカット（履歴のいちばん新しい値）
+             */
             stop_loss_price: number | null;
-            /** Stop Loss Reason */
+            /**
+             * Stop Loss Reason
+             * @description 今のロスカットの根拠
+             */
             stop_loss_reason: string | null;
+            /**
+             * Initial Stop Price
+             * @description 最初のロスカット。想定損失の基準
+             */
+            initial_stop_price: number | null;
             /** Limit Price */
             limit_price: number | null;
+            /**
+             * Limit Quantity
+             * @description 指値の株数。null は残り全部
+             */
+            limit_quantity: number | null;
             /** Memo */
             memo: string | null;
             /** Self Score */
@@ -941,7 +1489,7 @@ export interface components {
             realized_pnl: number;
             /**
              * Risk Amount
-             * @description ロスカットまでの想定損失（円）
+             * @description 想定損失（円）。新規価格と**最初の**ロスカットの差 × 株数
              */
             risk_amount: number | null;
             /**
@@ -949,12 +1497,25 @@ export interface components {
              * @description 確定損益 ÷ 想定損失（すべて決済したあと）
              */
             r_multiple: number | null;
+            /**
+             * Stop Pnl
+             * @description 残りの株が今のロスカットで決済されたときの損益（円。費用は含まない）。プラスは利益を確保できている
+             */
+            stop_pnl: number | null;
             /** Exits */
             exits: components["schemas"]["ExitOut"][];
+            /**
+             * Stop Changes
+             * @description ロスカットの履歴（古い順）
+             */
+            stop_changes: components["schemas"]["StopChangeOut"][];
         };
         /**
          * TradeUpdate
          * @description あとから変えられる項目。送った項目だけ変わる（null を送ると消える）。
+         *
+         *     ロスカットを送ると、今の値と違うときだけ、今日の変更として履歴に1行足す。
+         *     日付やメモを付けるなら `POST /trades/{id}/stops`。
          */
         TradeUpdate: {
             /** Stop Loss Price */
@@ -963,6 +1524,11 @@ export interface components {
             stop_loss_reason?: string | null;
             /** Limit Price */
             limit_price?: number | null;
+            /**
+             * Limit Quantity
+             * @description 指値の株数。null は残り全部
+             */
+            limit_quantity?: number | null;
             /** Memo */
             memo?: string | null;
             /** Entry Fee */
@@ -1166,6 +1732,42 @@ export interface operations {
                 content: {
                     "image/png": unknown;
                     "image/svg+xml": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stop_candidates_stocks__code__stop_candidates_get: {
+        parameters: {
+            query?: {
+                /** @description 注文価格（円）。省略時は基準日の調整後終値 */
+                entry_price?: number | null;
+                /** @description 基準日（YYYY-MM-DD）。省略時は指標がある最新日 */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StopCandidatesOut"];
                 };
             };
             /** @description Validation Error */
@@ -1469,6 +2071,303 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TradeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_stop_change_trades__trade_id__stops_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trade_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StopChangeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TradeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_stop_change_trades__trade_id__stops__stop_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trade_id: number;
+                stop_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TradeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_orders_orders_get: {
+        parameters: {
+            query?: {
+                /** @description PENDING=注文中 / FILLED=約定 / CANCELLED=取消。省略時は全部 */
+                status?: ("PENDING" | "FILLED" | "CANCELLED") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_order_orders_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_order_orders__order_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_order_orders__order_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_order_orders__order_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fill_order_orders__order_id__fill_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderFillIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TradeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_order_orders__order_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderCancelIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
                 };
             };
             /** @description Validation Error */

@@ -6,6 +6,7 @@ import type { Plugin } from 'vite'
 import { chartSvg, findStock, indicatorsOf, LATEST_DATE, SECTOR17, STOCKS } from './data.ts'
 import { breadth, sectors } from './market.ts'
 import * as trades from './trades.ts'
+import { maxShares } from '../src/lib/sizing.ts'
 
 type Result = { status?: number; body?: unknown; svg?: string }
 
@@ -30,10 +31,19 @@ async function handle(req: IncomingMessage, url: URL): Promise<Result> {
   if (path === '/health') return { body: { status: 'ok' } }
 
   if (path === '/candidates') {
-    const candidates = STOCKS.map((s) => indicatorsOf(s, asOf)).filter(
-      (i) => i?.is_short_candidate,
-    )
-    return { body: { as_of_date: asOf, count: candidates.length, candidates } }
+    // 建てられる株数: 口座全体 × 3% ÷ 2ATR を100株単位で切り捨て（本物は settings の sizing）
+    const p = trades.portfolio(query.get('as_of'))
+    const sizing = {
+      equity: p.equity, equity_date: p.as_of_date, risk_pct: 3,
+      risk_amount: Math.max(p.equity * 0.03, 0), atr_multiple: 2, lot_size: 100,
+    }
+    const candidates = STOCKS.map((s) => indicatorsOf(s, asOf))
+      .filter((i) => i?.is_short_candidate)
+      .map((i) => ({
+        ...i!,
+        max_shares: maxShares(sizing.risk_amount, i!.atr == null ? null : i!.atr * 2, 100),
+      }))
+    return { body: { as_of_date: asOf, count: candidates.length, sizing, candidates } }
   }
   if (path === '/stocks') {
     const q = (query.get('q') ?? '').trim()
