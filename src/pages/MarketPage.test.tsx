@@ -17,7 +17,7 @@ function mockApi() {
         items: [
           {
             period, start_date: '2026-08-14', end_date: '2026-08-14', base_date: '2026-08-13',
-            up: 2103, down: 1650, unchanged: 201, total: 3954, ratio: 127.5,
+            up: 2103, down: 1650, unchanged: 201, total: 3954, ratio: 1.27,
           },
           {
             period, start_date: '2026-08-13', end_date: '2026-08-13', base_date: '2026-08-12',
@@ -55,7 +55,8 @@ test('騰落と業種ランキングを出す', async () => {
 
   const breadth = within(section(/騰落/))
   expect(await breadth.findByText('2103')).toBeInTheDocument()
-  expect(breadth.getByText('127.5')).toBeInTheDocument()
+  // 比率は、均衡を1とする倍率。1より大きい（値上がりが多い）ときは赤
+  expect(breadth.getByText('1.27')).toHaveClass('text-up')
   expect(breadth.getByRole('img', { name: '値上がり 2103、変わらず 201、値下がり 1650' })).toBeInTheDocument()
   // 値下がりが0の期間は、比率を出さない
   expect(within(breadth.getAllByRole('row')[2]).getByText('-')).toBeInTheDocument()

@@ -74,7 +74,7 @@ export function breadth(
           .map((s) => changePct(s, span))
           .filter((v) => v !== undefined),
       )
-      return { period, ...span, ...c, ratio: c.down ? round2((c.up / c.down) * 100) : null }
+      return { period, ...span, ...c, ratio: c.down ? round2(c.up / c.down) : null }
     })
   return { period, as_of_date: asOf, market, items }
 }

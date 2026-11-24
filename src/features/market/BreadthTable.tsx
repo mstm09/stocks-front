@@ -6,7 +6,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { cn } from '@/lib/utils'
 import type { BreadthItem } from './api'
+
+/** 比率の色。1より大きい（値上がりが多い）は赤、小さいは青、ちょうど1は色なし。 */
+function ratioColor(ratio: number | null | undefined): string | undefined {
+  if (ratio == null || ratio === 1) return undefined
+  return ratio > 1 ? 'text-up' : 'text-down'
+}
 
 /** 騰落の表。1行が1期間。値上がり・変わらず・値下がりの割合を、横棒でも出す。 */
 export function BreadthTable({ items }: { items: BreadthItem[] }) {
@@ -23,7 +30,7 @@ export function BreadthTable({ items }: { items: BreadthItem[] }) {
             <TableHead className="h-9 w-1/3">割合</TableHead>
             <TableHead
               className="h-9 text-right"
-              title="値上がり ÷ 値下がり × 100。100を超えると、値上がりの方が多い"
+              title="値上がり ÷ 値下がり。1 で均衡、1より大きいと値上がりが多い"
             >
               比率
             </TableHead>
@@ -40,8 +47,8 @@ export function BreadthTable({ items }: { items: BreadthItem[] }) {
               <TableCell>
                 <BreadthBar item={b} />
               </TableCell>
-              <TableCell className="text-right font-medium">
-                {b.ratio == null ? '-' : b.ratio.toFixed(1)}
+              <TableCell className={cn('text-right font-medium', ratioColor(b.ratio))}>
+                {b.ratio == null ? '-' : b.ratio.toFixed(2)}
               </TableCell>
             </TableRow>
           ))}
