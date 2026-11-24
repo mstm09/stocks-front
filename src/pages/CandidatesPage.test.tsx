@@ -116,6 +116,8 @@ test('建てられる株数を出し、0株の行はグレーにする（選ん�
   await screen.findByText('日本取引所グループ')
 
   expect(screen.getByLabelText('株数の基準額')).toHaveValue(100)
+  // 移動平均の値は、表には出さない（右の詳細とチャートで見る）
+  expect(screen.queryByRole('columnheader', { name: /10日|25日|60日|13週|26週/ })).not.toBeInTheDocument()
   expect(screen.getByText(/× 3% ＝ 許容損失 3万円 ÷ 2ATR/)).toBeInTheDocument()
   const jpx = screen.getByText('日本取引所グループ').closest('tr')!
   const toyota = screen.getByText('トヨタ自動車').closest('tr')!
