@@ -1,9 +1,15 @@
+import { useState } from 'react'
+import { Link } from 'react-router'
 import { AsOfPicker } from '@/components/AsOfPicker'
 import { Empty, ErrorMessage, Loading } from '@/components/Status'
 import { useCandidates } from '@/features/candidates/api'
 import { CandidateTable } from '@/features/candidates/CandidateTable'
 import { SizingNote } from '@/features/candidates/SizingNote'
+import type { Order } from '@/features/orders/api'
+import { OrderDialog } from '@/features/orders/OrderDialog'
+import type { Indicators } from '@/features/stocks/api'
 import { StockPanel } from '@/features/stocks/StockPanel'
+import { formatCode, formatPrice } from '@/lib/format'
 import { useUrlParams } from '@/lib/useUrlParams'
 
 /** 売り建て候補の一覧。基準日と選んだ銘柄は、URL（?as_of=2026-08-14&code=86970）に持たせる。 */
@@ -14,6 +20,9 @@ export function CandidatesPage() {
 
   const { data, isPending, error } = useCandidates(asOf)
   const selected = data?.candidates.find((c) => c.code === code)
+  // 注文ダイアログを開いている銘柄と、登録した注文（「登録しました」を出すため）
+  const [ordering, setOrdering] = useState<Indicators | null>(null)
+  const [added, setAdded] = useState<Order | null>(null)
 
   return (
     <div className="space-y-4">
@@ -30,6 +39,15 @@ export function CandidatesPage() {
       </div>
 
       {data && <SizingNote sizing={data.sizing} />}
+      {added && (
+        <p role="status" className="rounded-md border bg-card px-3 py-2 text-sm">
+          注文 #{added.id}（{formatCode(added.code)} {added.name} {added.quantity}株 ×{' '}
+          {formatPrice(added.order_price)}円）を登録しました。
+          <Link to="/trades" className="ml-2 underline">
+            売買記録で見る
+          </Link>
+        </p>
+      )}
 
       {isPending && <Loading />}
       {error && <ErrorMessage error={error} />}
@@ -37,13 +55,17 @@ export function CandidatesPage() {
 
       {data && data.count > 0 && (
         // 広い画面では、左に表・右にチャートを並べる。狭い画面では縦に積む。
-        // 表は列が収まる幅（44rem）、チャートは少なくとも 32rem を確保し、残りは半分ずつ分ける。
+        // 表は列が収まる幅（56rem）、チャートは少なくとも 32rem を確保し、残りは半分ずつ分ける。
         // 画面が広いほどチャートが大きくなる。
-        <div className="grid items-start gap-4 xl:grid-cols-[minmax(44rem,1fr)_minmax(32rem,1fr)]">
+        <div className="grid items-start gap-4 xl:grid-cols-[minmax(56rem,1fr)_minmax(32rem,1fr)]">
           <CandidateTable
             candidates={data.candidates}
             selectedCode={code}
             onSelect={(c) => url.set('code', c)}
+            onOrder={(stock) => {
+              setAdded(null)
+              setOrdering(stock)
+            }}
           />
           {/*
             右側は、表をスクロールしても画面の上に固定する（sticky）。
@@ -58,6 +80,19 @@ export function CandidatesPage() {
             )}
           </div>
         </div>
+      )}
+
+      {ordering && data && (
+        <OrderDialog
+          stock={ordering}
+          sizing={data.sizing}
+          asOf={asOf}
+          onClose={() => setOrdering(null)}
+          onAdded={(order) => {
+            setOrdering(null)
+            setAdded(order)
+          }}
+        />
       )}
     </div>
   )
