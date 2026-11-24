@@ -73,11 +73,11 @@ test('期間と市場区分を変えると、その条件でAPIを呼ぶ', async
   renderApp('/market')
   await screen.findByText('海運業')
 
-  await userEvent.click(screen.getByRole('button', { name: '週' }))
+  await userEvent.click(screen.getByRole('button', { name: '週（5営業日）' }))
   await userEvent.selectOptions(await screen.findByLabelText('市場区分'), 'プライム')
 
-  expect(await screen.findByText('2026-08-14 時点・前週末比・プライム')).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: '週' })).toHaveAttribute('aria-pressed', 'true')
+  expect(await screen.findByText('2026-08-14 時点・5営業日前比・プライム')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '週（5営業日）' })).toHaveAttribute('aria-pressed', 'true')
   const last = fetchMock.mock.calls
     .map((c) => new URL((c[0] as Request).url))
     .filter((u) => u.pathname === '/api/market/sectors')
