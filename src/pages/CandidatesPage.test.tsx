@@ -152,6 +152,26 @@ test('継続日数を出し、初日の銘柄には「新規」の印を付け�
   expect(codesInTable()).toEqual(['7203', '8697', '6758']) // 短い順
 })
 
+test('業種（17業種）を出し、マウスを乗せると33業種と市場区分。業種で並べ替えできる', async () => {
+  mockApi([
+    indicators({ sector17: '金融（除く銀行）', sector33: 'その他金融業', market_name: 'プライム' }),
+    indicators({ code: '72030', name: 'トヨタ自動車', sector17: '自動車・輸送機', sector33: '輸送用機器', market_name: 'プライム' }),
+    indicators({ code: '86040', name: '野村ホールディングス', sector17: '金融（除く銀行）' }),
+  ])
+  renderApp('/candidates')
+  await screen.findByText('日本取引所グループ')
+
+  const cell = within(screen.getByText('日本取引所グループ').closest('tr')!).getByText('金融（除く銀行）')
+  expect(cell).toHaveAttribute('title', 'その他金融業・プライム')
+  await userEvent.click(screen.getByRole('button', { name: /業種/ }))
+  // 同じ業種がまとまる（業種の並びは文字の順）
+  expect(codesInTable()).toEqual(['7203', '8697', '8604'])
+
+  await userEvent.click(screen.getByText('トヨタ自動車'))
+  const panel = within(await screen.findByRole('region', { name: '選択した銘柄' }))
+  expect(panel.getByText('輸送用機器・プライム')).toBeInTheDocument()
+})
+
 test('基準額を変えると、すぐ株数とグレーが変わり、次に開いたときも覚えている', async () => {
   mockApi([indicators(), indicators({ code: '72030', name: 'トヨタ自動車', atr: 160 })])
   const { unmount } = renderApp('/candidates')

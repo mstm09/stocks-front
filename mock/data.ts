@@ -161,6 +161,9 @@ export function indicatorsOf(stock: MockStock, asOf: string): Indicators | undef
   return {
     code: stock.code,
     name: stock.name,
+    sector17: SECTOR17[stock.sector] ?? null,
+    sector33: stock.sector,
+    market_name: stock.market,
     as_of_date: asOf,
     close,
     ma10: round2(ma10),
