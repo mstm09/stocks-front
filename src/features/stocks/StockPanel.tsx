@@ -30,6 +30,11 @@ export function StockPanel({ stock, linkToDetail = false }: Props) {
             name
           )}
         </h2>
+        {(stock.sector33 || stock.market_name) && (
+          <span className="text-sm text-muted-foreground">
+            {[stock.sector33, stock.market_name].filter(Boolean).join('・')}
+          </span>
+        )}
         <Badge variant={stock.is_short_candidate ? 'default' : 'secondary'}>
           {stock.is_short_candidate ? '売り建て候補' : '候補ではない'}
         </Badge>

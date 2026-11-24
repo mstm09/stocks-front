@@ -13,13 +13,14 @@ import {
 import type { Indicators } from '@/features/stocks/api'
 import { cn } from '@/lib/utils'
 
-type SortKey = 'code' | 'close' | 'atr' | 'max_shares' | 'streak_days'
+type SortKey = 'code' | 'sector17' | 'close' | 'atr' | 'max_shares' | 'streak_days'
 type Sort = { key: SortKey; desc: boolean }
 
 /** 表の列。並べ替えできる列には sortKey を付ける。 */
 const COLUMNS: { label: string; title?: string; sortKey?: SortKey; numeric?: boolean }[] = [
   { label: 'コード', sortKey: 'code' },
   { label: '銘柄名' },
+  { label: '業種', title: '17業種。マウスを乗せると33業種と市場区分', sortKey: 'sector17' },
   {
     label: '継続',
     title: '基準日まで、何営業日続けて売り建て候補か。「以上」は判定の履歴の始まりまで続いている',
@@ -114,6 +115,12 @@ export function CandidateTable({ candidates, selectedCode, onSelect, onOrder }: 
               >
                 <TableCell className="font-mono">{formatCode(c.code)}</TableCell>
                 <TableCell className="max-w-40 truncate">{c.name ?? '-'}</TableCell>
+                <TableCell
+                  className="max-w-36 truncate text-xs"
+                  title={[c.sector33, c.market_name].filter(Boolean).join('・') || undefined}
+                >
+                  {c.sector17 ?? '-'}
+                </TableCell>
                 <TableCell className="text-right whitespace-nowrap">
                   <Streak stock={c} />
                 </TableCell>
