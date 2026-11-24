@@ -37,7 +37,7 @@
           "stocks"
         ],
         "summary": "Candidates",
-        "description": "売り建て候補の一覧。各銘柄の指標つき（チャートは `chart_url`）。",
+        "description": "売り建て候補の一覧。各銘柄の指標つき（チャートは `chart_url`）。\n\n`max_shares` は、1回の損失を口座全体の決めた%に収めて建てられる株数（`sizing` が前提）。",
         "operationId": "candidates_candidates_get",
         "security": [
           {
@@ -321,6 +321,92 @@
             "content": {
               "image/png": {},
               "image/svg+xml": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stocks/{code}/stop-candidates": {
+      "get": {
+        "tags": [
+          "stocks"
+        ],
+        "summary": "Stop Candidates",
+        "description": "売り建てのロスカット候補。直近の陰線の高値＋1ティックのうち、注文価格 ＋ 1〜2ATR に\n入るものから、1ATR・1.5ATR・2ATR にいちばん近いものを1件ずつ（最大3件）。",
+        "operationId": "stop_candidates_stocks__code__stop_candidates_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Code"
+            }
+          },
+          {
+            "name": "entry_price",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "注文価格（円）。省略時は基準日の調整後終値",
+              "title": "Entry Price"
+            },
+            "description": "注文価格（円）。省略時は基準日の調整後終値"
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "基準日（YYYY-MM-DD）。省略時は指標がある最新日",
+              "title": "As Of"
+            },
+            "description": "基準日（YYYY-MM-DD）。省略時は指標がある最新日"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StopCandidatesOut"
+                }
+              }
             }
           },
           "422": {
@@ -919,6 +1005,490 @@
         }
       }
     },
+    "/trades/{trade_id}/stops": {
+      "post": {
+        "tags": [
+          "trades"
+        ],
+        "summary": "Add Stop Change",
+        "description": "ロスカットの設定・変更を、履歴に1行足す（手動のトレイリングストップ）。",
+        "operationId": "add_stop_change_trades__trade_id__stops_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trade_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Trade Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StopChangeIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trades/{trade_id}/stops/{stop_id}": {
+      "delete": {
+        "tags": [
+          "trades"
+        ],
+        "summary": "Delete Stop Change",
+        "description": "ロスカットの履歴を1行消す（登録の間違いを直すため）。",
+        "operationId": "delete_stop_change_trades__trade_id__stops__stop_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trade_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Trade Id"
+            }
+          },
+          {
+            "name": "stop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Stop Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders": {
+      "get": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "List Orders",
+        "description": "注文の一覧（注文した日が古い順）。期限切れは、注文中で `is_expired` が true。",
+        "operationId": "list_orders_orders_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "PENDING",
+                    "FILLED",
+                    "CANCELLED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "PENDING=注文中 / FILLED=約定 / CANCELLED=取消。省略時は全部",
+              "title": "Status"
+            },
+            "description": "PENDING=注文中 / FILLED=約定 / CANCELLED=取消。省略時は全部"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderOut"
+                  },
+                  "title": "Response List Orders Orders Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Add Order",
+        "description": "注文（指値で仕掛け中）を登録する。口座全体・損益には入らない。",
+        "operationId": "add_order_orders_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{order_id}": {
+      "get": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Get Order",
+        "operationId": "get_order_orders__order_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Order Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Update Order",
+        "description": "注文中の注文を変える。送った項目だけ変わる。",
+        "operationId": "update_order_orders__order_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Order Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Delete Order",
+        "description": "注文を消す（登録の間違いを直すため）。約定して作った売買は残る。",
+        "operationId": "delete_order_orders__order_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Order Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{order_id}/fill": {
+      "post": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Fill Order",
+        "description": "約定を登録する。注文の内容で売買を1件作って返す（注文は FILLED になる）。",
+        "operationId": "fill_order_orders__order_id__fill_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Order Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderFillIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{order_id}/cancel": {
+      "post": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Cancel Order",
+        "description": "注文を取り消す（期限切れの注文も、これで閉じる）。",
+        "operationId": "cancel_order_orders__order_id__cancel_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Order Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderCancelIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/cash": {
       "get": {
         "tags": [
@@ -1219,6 +1789,9 @@
             "type": "integer",
             "title": "Count"
           },
+          "sizing": {
+            "$ref": "#/components/schemas/SizingOut"
+          },
           "candidates": {
             "items": {
               "$ref": "#/components/schemas/Indicators"
@@ -1231,6 +1804,7 @@
         "required": [
           "as_of_date",
           "count",
+          "sizing",
           "candidates"
         ],
         "title": "Candidates"
@@ -1675,6 +2249,18 @@
             "title": "Atr Pct",
             "description": "ATR ÷ 基準日の終値（%）"
           },
+          "max_shares": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Shares",
+            "description": "1回の損失を口座の決めた%（既定3%）に収めて建てられる株数。1株あたりの想定損失を 2ATR として計算し、100株単位で切り捨て。0は建てられない。ATRがなければ null"
+          },
           "chart_url": {
             "type": "string",
             "title": "Chart Url",
@@ -1690,6 +2276,530 @@
         ],
         "title": "Indicators",
         "description": "1銘柄の指標。チャート画像と一緒にClaudeへ渡す数値（docs/chart.md §5）。"
+      },
+      "OrderCancelIn": {
+        "properties": {
+          "cancelled_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled On",
+            "description": "取消の日。省略時は今日"
+          }
+        },
+        "type": "object",
+        "title": "OrderCancelIn"
+      },
+      "OrderFillIn": {
+        "properties": {
+          "filled_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Filled On",
+            "description": "約定日"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price",
+            "description": "約定価格。省略時は注文価格"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity",
+            "description": "約定した株数。省略時は注文の株数。減らすと残りは取消扱い（部分約定は扱わない）"
+          },
+          "fee": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Fee",
+            "description": "新規の手数料など（円）",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "filled_on"
+        ],
+        "title": "OrderFillIn",
+        "description": "約定の登録。注文の内容で売買を1件作る。"
+      },
+      "OrderIn": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "銘柄コード（4桁か5桁）",
+            "examples": [
+              "8697"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "MARGIN_SHORT",
+              "MARGIN_LONG",
+              "SPOT"
+            ],
+            "title": "Kind",
+            "description": "MARGIN_SHORT=信用売り / MARGIN_LONG=信用買い / SPOT=現物買い"
+          },
+          "ordered_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Ordered On",
+            "description": "注文した日"
+          },
+          "quantity": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Quantity",
+            "description": "注文の株数"
+          },
+          "order_price": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Order Price",
+            "description": "注文価格（仕掛けの指値。円）"
+          },
+          "expires_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires On",
+            "description": "有効期限（この日まで）"
+          },
+          "stop_loss_price": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Loss Price",
+            "description": "ロスカットの価格。注文価格に対して損をする側に限る"
+          },
+          "stop_loss_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Loss Reason",
+            "description": "ロスカットの根拠"
+          },
+          "limit_price": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Price",
+            "description": "利確の指値（売買の指値になる）"
+          },
+          "limit_quantity": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Quantity",
+            "description": "利確の指値の株数。省略時は全部"
+          },
+          "memo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memo",
+            "description": "注文の理由などのメモ"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "kind",
+          "ordered_on",
+          "quantity",
+          "order_price"
+        ],
+        "title": "OrderIn",
+        "description": "注文（指値で仕掛け中）の登録。"
+      },
+      "OrderOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "kind_label": {
+            "type": "string",
+            "title": "Kind Label",
+            "description": "種類の表示名（信用売り など）"
+          },
+          "ordered_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Ordered On"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          },
+          "order_price": {
+            "type": "number",
+            "title": "Order Price",
+            "description": "注文価格（仕掛けの指値）"
+          },
+          "expires_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires On"
+          },
+          "stop_loss_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Loss Price"
+          },
+          "stop_loss_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Loss Reason"
+          },
+          "limit_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Price",
+            "description": "利確の指値"
+          },
+          "limit_quantity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Quantity"
+          },
+          "memo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memo"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "PENDING=注文中 / FILLED=約定 / CANCELLED=取消"
+          },
+          "status_label": {
+            "type": "string",
+            "title": "Status Label"
+          },
+          "is_expired": {
+            "type": "boolean",
+            "title": "Is Expired",
+            "description": "注文中で、有効期限が今日より前"
+          },
+          "resolved_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved On",
+            "description": "約定・取消の日"
+          },
+          "trade_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Id",
+            "description": "約定して作った売買の番号"
+          },
+          "risk_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Amount",
+            "description": "想定損失（円）。|注文価格 − ロスカット| × 株数"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price",
+            "description": "今の終値（調整前）。注文中のときだけ"
+          },
+          "price_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Date",
+            "description": "その終値の日付"
+          },
+          "to_order_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Order Pct",
+            "description": "終値から注文価格までの距離（%）。プラスは注文価格が終値より上"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "name",
+          "kind",
+          "kind_label",
+          "ordered_on",
+          "quantity",
+          "order_price",
+          "expires_on",
+          "stop_loss_price",
+          "stop_loss_reason",
+          "limit_price",
+          "limit_quantity",
+          "memo",
+          "status",
+          "status_label",
+          "is_expired",
+          "resolved_on",
+          "trade_id",
+          "risk_amount",
+          "price",
+          "price_date",
+          "to_order_pct"
+        ],
+        "title": "OrderOut"
+      },
+      "OrderUpdate": {
+        "properties": {
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "order_price": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Price"
+          },
+          "expires_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires On"
+          },
+          "stop_loss_price": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Loss Price"
+          },
+          "stop_loss_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Loss Reason"
+          },
+          "limit_price": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Price"
+          },
+          "limit_quantity": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Quantity"
+          },
+          "memo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memo"
+          }
+        },
+        "type": "object",
+        "title": "OrderUpdate",
+        "description": "注文中の注文の変更。送った項目だけ変わる（株数・注文価格以外は null で消える）。"
       },
       "PortfolioOut": {
         "properties": {
@@ -1992,6 +3102,52 @@
         "title": "SectorRanking",
         "description": "業種別の上昇率ランキング。上昇率は単純平均で、東証の業種別株価指数とは一致しない。"
       },
+      "SizingOut": {
+        "properties": {
+          "equity": {
+            "type": "number",
+            "title": "Equity",
+            "description": "口座全体（円）。現金 ＋ 現物の評価額 ＋ 信用の含み損益"
+          },
+          "equity_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Equity Date",
+            "description": "口座全体を計算した日"
+          },
+          "risk_pct": {
+            "type": "number",
+            "title": "Risk Pct",
+            "description": "1回に許す損失（口座全体の%）"
+          },
+          "risk_amount": {
+            "type": "number",
+            "title": "Risk Amount",
+            "description": "許容損失（円）。口座全体がマイナスなら0"
+          },
+          "atr_multiple": {
+            "type": "number",
+            "title": "Atr Multiple",
+            "description": "候補一覧での1株あたりの想定損失（ATRの何倍）"
+          },
+          "lot_size": {
+            "type": "integer",
+            "title": "Lot Size",
+            "description": "単元株数。株数はこの単位で切り捨てる"
+          }
+        },
+        "type": "object",
+        "required": [
+          "equity",
+          "equity_date",
+          "risk_pct",
+          "risk_amount",
+          "atr_multiple",
+          "lot_size"
+        ],
+        "title": "SizingOut",
+        "description": "建てられる株数の計算の前提（docs/orders.md §3）。"
+      },
       "StockSummary": {
         "properties": {
           "code": {
@@ -2064,6 +3220,260 @@
         "title": "StockSummary",
         "description": "銘柄マスタの1件（画面の検索結果）。"
       },
+      "StopCandidateOut": {
+        "properties": {
+          "price": {
+            "type": "number",
+            "title": "Price",
+            "description": "ロスカットの候補（陰線の高値＋1ティック。円）"
+          },
+          "target_multiple": {
+            "type": "number",
+            "title": "Target Multiple",
+            "description": "どの目標（ATRの何倍）に近いものとして選んだか"
+          },
+          "atr_multiple": {
+            "type": "number",
+            "title": "Atr Multiple",
+            "description": "実際の想定損失が、ATRの何倍か"
+          },
+          "distance": {
+            "type": "number",
+            "title": "Distance",
+            "description": "候補 − 注文価格（1株あたりの想定損失。円）"
+          },
+          "bar_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Bar Date",
+            "description": "元の陰線の日"
+          },
+          "bar_high": {
+            "type": "number",
+            "title": "Bar High",
+            "description": "元の陰線の高値（調整後）"
+          }
+        },
+        "type": "object",
+        "required": [
+          "price",
+          "target_multiple",
+          "atr_multiple",
+          "distance",
+          "bar_date",
+          "bar_high"
+        ],
+        "title": "StopCandidateOut"
+      },
+      "StopCandidatesOut": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          },
+          "entry_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Price",
+            "description": "注文価格。省略時は基準日の調整後終値"
+          },
+          "atr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Atr",
+            "description": "基準日のATR（円）"
+          },
+          "range_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Range Low",
+            "description": "候補の範囲の下限（注文価格 ＋ 1ATR）"
+          },
+          "range_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Range High",
+            "description": "候補の範囲の上限（注文価格 ＋ 2ATR）"
+          },
+          "lookback_days": {
+            "type": "integer",
+            "title": "Lookback Days",
+            "description": "陰線を探した営業日数"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/StopCandidateOut"
+            },
+            "type": "array",
+            "title": "Candidates",
+            "description": "価格の低い順。最大3件（1ATR・1.5ATR・2ATRに近いもの）。空は候補なし"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "as_of_date",
+          "entry_price",
+          "atr",
+          "range_low",
+          "range_high",
+          "lookback_days",
+          "candidates"
+        ],
+        "title": "StopCandidatesOut",
+        "description": "売り建てのロスカット候補（docs/orders.md §2）。"
+      },
+      "StopChangeIn": {
+        "properties": {
+          "changed_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Changed On",
+            "description": "ロスカットを設定・変更した日"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price",
+            "description": "ロスカットの価格。null はロスカットを外した"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "根拠"
+          },
+          "memo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "changed_on",
+          "price"
+        ],
+        "title": "StopChangeIn",
+        "description": "ロスカットの設定・変更。最初のロスカットだけは損をする側に限る（そのあとは利益側にも置ける）。"
+      },
+      "StopChangeOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "changed_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Changed On"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price",
+            "description": "ロスカットの価格。null はロスカットを外した"
+          },
+          "previous_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Price",
+            "description": "変える前のロスカット（最初の行は null）"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "memo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "changed_on",
+          "price",
+          "previous_price",
+          "reason",
+          "memo"
+        ],
+        "title": "StopChangeOut"
+      },
       "TradeIn": {
         "properties": {
           "code": {
@@ -2120,7 +3530,7 @@
               }
             ],
             "title": "Stop Loss Price",
-            "description": "ロスカットの価格"
+            "description": "最初のロスカットの価格。損をする側に限る"
           },
           "stop_loss_reason": {
             "anyOf": [
@@ -2146,6 +3556,19 @@
             ],
             "title": "Limit Price",
             "description": "指値（利益確定などの注文価格）"
+          },
+          "limit_quantity": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Quantity",
+            "description": "指値の株数。省略時は残り全部"
           },
           "memo": {
             "anyOf": [
@@ -2227,7 +3650,8 @@
                 "type": "null"
               }
             ],
-            "title": "Stop Loss Price"
+            "title": "Stop Loss Price",
+            "description": "今のロスカット（履歴のいちばん新しい値）"
           },
           "stop_loss_reason": {
             "anyOf": [
@@ -2238,7 +3662,20 @@
                 "type": "null"
               }
             ],
-            "title": "Stop Loss Reason"
+            "title": "Stop Loss Reason",
+            "description": "今のロスカットの根拠"
+          },
+          "initial_stop_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initial Stop Price",
+            "description": "最初のロスカット。想定損失の基準"
           },
           "limit_price": {
             "anyOf": [
@@ -2250,6 +3687,18 @@
               }
             ],
             "title": "Limit Price"
+          },
+          "limit_quantity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Quantity",
+            "description": "指値の株数。null は残り全部"
           },
           "memo": {
             "anyOf": [
@@ -2321,7 +3770,7 @@
               }
             ],
             "title": "Risk Amount",
-            "description": "ロスカットまでの想定損失（円）"
+            "description": "想定損失（円）。新規価格と**最初の**ロスカットの差 × 株数"
           },
           "r_multiple": {
             "anyOf": [
@@ -2335,12 +3784,32 @@
             "title": "R Multiple",
             "description": "確定損益 ÷ 想定損失（すべて決済したあと）"
           },
+          "stop_pnl": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Pnl",
+            "description": "残りの株が今のロスカットで決済されたときの損益（円。費用は含まない）。プラスは利益を確保できている"
+          },
           "exits": {
             "items": {
               "$ref": "#/components/schemas/ExitOut"
             },
             "type": "array",
             "title": "Exits"
+          },
+          "stop_changes": {
+            "items": {
+              "$ref": "#/components/schemas/StopChangeOut"
+            },
+            "type": "array",
+            "title": "Stop Changes",
+            "description": "ロスカットの履歴（古い順）"
           }
         },
         "type": "object",
@@ -2356,7 +3825,9 @@
           "entry_fee",
           "stop_loss_price",
           "stop_loss_reason",
+          "initial_stop_price",
           "limit_price",
+          "limit_quantity",
           "memo",
           "self_score",
           "self_review",
@@ -2366,7 +3837,9 @@
           "realized_pnl",
           "risk_amount",
           "r_multiple",
-          "exits"
+          "stop_pnl",
+          "exits",
+          "stop_changes"
         ],
         "title": "TradeOut"
       },
@@ -2406,6 +3879,19 @@
               }
             ],
             "title": "Limit Price"
+          },
+          "limit_quantity": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Quantity",
+            "description": "指値の株数。null は残り全部"
           },
           "memo": {
             "anyOf": [
@@ -2459,7 +3945,7 @@
         },
         "type": "object",
         "title": "TradeUpdate",
-        "description": "あとから変えられる項目。送った項目だけ変わる（null を送ると消える）。"
+        "description": "あとから変えられる項目。送った項目だけ変わる（null を送ると消える）。\n\nロスカットを送ると、今の値と違うときだけ、今日の変更として履歴に1行足す。\n日付やメモを付けるなら `POST /trades/{id}/stops`。"
       },
       "ValidationError": {
         "properties": {

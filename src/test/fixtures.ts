@@ -30,6 +30,21 @@ export function indicators(over: Partial<Indicators> = {}): Indicators {
   }
 }
 
+type Sizing = import('@/features/candidates/api').Sizing
+
+/** テスト用の、建てられる株数の前提（口座全体 100万円 × 3%）。 */
+export function sizing(over: Partial<Sizing> = {}): Sizing {
+  return {
+    equity: 1_000_000,
+    equity_date: '2026-08-14',
+    risk_pct: 3,
+    risk_amount: 30_000,
+    atr_multiple: 2,
+    lot_size: 100,
+    ...over,
+  }
+}
+
 export function svgResponse() {
   return new Response('<svg xmlns="http://www.w3.org/2000/svg"/>', {
     headers: { 'Content-Type': 'image/svg+xml' },
@@ -52,7 +67,9 @@ export function trade(over: Partial<Trade> = {}): Trade {
     entry_fee: 0,
     stop_loss_price: 1060,
     stop_loss_reason: '直近の戻り高値の上',
+    initial_stop_price: 1060,
     limit_price: 900,
+    limit_quantity: null,
     memo: '60日線で頭を押さえられた',
     self_score: null,
     self_review: null,
@@ -62,7 +79,9 @@ export function trade(over: Partial<Trade> = {}): Trade {
     realized_pnl: 0,
     risk_amount: 18000,
     r_multiple: null,
+    stop_pnl: -18000,
     exits: [],
+    stop_changes: [],
     ...over,
   }
 }
