@@ -53,3 +53,8 @@ export function formatPnl(value: number | null | undefined): string {
 export function formatR(value: number | null | undefined): string {
   return value == null ? '-' : `${value > 0 ? '+' : ''}${value.toFixed(2)}R`
 }
+
+/** 株数。1,200 のように出す。値がなければ「-」。 */
+export function formatShares(value: number | null | undefined): string {
+  return value == null ? '-' : integer.format(value)
+}

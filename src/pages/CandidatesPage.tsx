@@ -2,6 +2,7 @@ import { AsOfPicker } from '@/components/AsOfPicker'
 import { Empty, ErrorMessage, Loading } from '@/components/Status'
 import { useCandidates } from '@/features/candidates/api'
 import { CandidateTable } from '@/features/candidates/CandidateTable'
+import { SizingNote } from '@/features/candidates/SizingNote'
 import { StockPanel } from '@/features/stocks/StockPanel'
 import { useUrlParams } from '@/lib/useUrlParams'
 
@@ -27,6 +28,8 @@ export function CandidatesPage() {
           <AsOfPicker value={asOf} onChange={(v) => url.set('as_of', v)} />
         </div>
       </div>
+
+      {data && <SizingNote sizing={data.sizing} />}
 
       {isPending && <Loading />}
       {error && <ErrorMessage error={error} />}
