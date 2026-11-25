@@ -27,7 +27,8 @@ export function StatusBadge({ trade }: { trade: Trade }) {
  * 売買の一覧。約定価格・現在値・今の損益が中心。銘柄名を押すと、1件の画面へ移る。
  * - 現在値: 保有中は最新の終値、決済済みは決済価格の平均
  * - 損益: 保有中は 含み損益 ＋ 一部決済の確定損益、決済済みは 確定損益
- * - ロスカット: 範囲（終値から1〜2ATR）から外れていたら印。範囲はマウスを乗せると出る
+ * - ロスカット: 範囲（終値から1〜2ATR）から外れていたら印
+ * - 範囲: 今の終値とATRから見た、ロスカットを置く範囲（保有中だけ）
  */
 export function TradeTable({ trades }: { trades: Trade[] }) {
   return (
@@ -54,13 +55,19 @@ export function TradeTable({ trades }: { trades: Trade[] }) {
             <TableHead className="h-9 text-right" title="今のロスカット。範囲（終値から1〜2ATR）から外れていたら印">
               ロスカット
             </TableHead>
+            <TableHead
+              className="h-9 text-right"
+              title="ロスカットを置く範囲。終値から1〜2ATR（売り建ては上、買いは下）。マウスを乗せると基準の終値とATR"
+            >
+              ロスカット範囲
+            </TableHead>
             <TableHead className="h-9">状態</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {trades.map((t) => {
             const open = t.status === 'OPEN'
-            const range = stopRangeText(t)
+            const range = stopRangeText(t, '')
             return (
               <TableRow key={t.id}>
                 <TableCell>{t.opened_on}</TableCell>
@@ -94,10 +101,7 @@ export function TradeTable({ trades }: { trades: Trade[] }) {
                 <TableCell className={cn('text-right', changeColor(t.pnl_pct))}>
                   {formatChange(t.pnl_pct)}
                 </TableCell>
-                <TableCell
-                  className="text-right whitespace-nowrap"
-                  title={range ? `範囲 ${range}（${stopRangeBasis(t)}）` : undefined}
-                >
+                <TableCell className="text-right whitespace-nowrap">
                   {open ? (
                     <>
                       <StopPositionBadge trade={t} />
@@ -106,6 +110,12 @@ export function TradeTable({ trades }: { trades: Trade[] }) {
                   ) : (
                     '-'
                   )}
+                </TableCell>
+                <TableCell
+                  className="text-right whitespace-nowrap"
+                  title={range ? stopRangeBasis(t) : undefined}
+                >
+                  {open && range ? range : '-'}
                 </TableCell>
                 <TableCell>
                   <StatusBadge trade={t} />

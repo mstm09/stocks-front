@@ -115,15 +115,14 @@ test('一覧は約定価格・現在値・今の損益が中心。保有中の�
   expect(within(jpx).getByText('+12,000')).toHaveClass('text-up')
   expect(within(jpx).getByText('+4.00%')).toBeInTheDocument()
   expect(within(jpx).getByText('遠すぎ')).toBeInTheDocument()
-  expect(within(jpx).getByText('遠すぎ').closest('td')).toHaveAttribute(
-    'title',
-    '範囲 980〜1,000円（2026-08-14 の終値 960円・ATR 20円）',
-  )
+  // 範囲の列（基準の終値とATRは、マウスを乗せると）
+  expect(within(jpx).getByText('980〜1,000')).toHaveAttribute('title', '2026-08-14 の終値 960円・ATR 20円')
   expect(within(screen.getByText('ソニーグループ').closest('tr')!).getByText('越えている')).toBeInTheDocument()
 
   const toyota = screen.getByText('トヨタ自動車').closest('tr')!
   expect(within(toyota).getByText('1,020')).toHaveAttribute('title', '2026-08-10 に決済')
   expect(within(toyota).getByText('-6,000')).toHaveClass('text-down')
+  expect(within(toyota).getAllByText('-').length).toBeGreaterThanOrEqual(2) // 決済済みはロスカット・範囲なし
   // 番号・R倍数・自己採点は一覧に出さない
   expect(screen.queryByText('-1.00R')).not.toBeInTheDocument()
   expect(screen.queryByRole('columnheader', { name: /番号|R倍数|自己採点/ })).not.toBeInTheDocument()
