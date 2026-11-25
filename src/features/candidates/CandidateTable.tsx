@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { EarningsBadge } from '@/components/EarningsBadge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { formatCode, formatPrice, formatShares, formatZone } from '@/lib/format'
@@ -114,7 +115,18 @@ export function CandidateTable({ candidates, selectedCode, onSelect, onOrder }: 
                 )}
               >
                 <TableCell className="font-mono">{formatCode(c.code)}</TableCell>
-                <TableCell className="max-w-40 truncate">{c.name ?? '-'}</TableCell>
+                <TableCell className="max-w-56">
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate">{c.name ?? '-'}</span>
+                    <EarningsBadge
+                      date={c.next_earnings_date}
+                      fq={c.next_earnings_fq}
+                      days={c.earnings_in_days}
+                      level={c.earnings_level}
+                      className="shrink-0 px-1.5 py-0 text-[10px]"
+                    />
+                  </div>
+                </TableCell>
                 <TableCell
                   className="max-w-36 truncate text-xs"
                   title={[c.sector33, c.market_name].filter(Boolean).join('・') || undefined}

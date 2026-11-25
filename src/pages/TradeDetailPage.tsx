@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
+import { EarningsBadge } from '@/components/EarningsBadge'
 import { ErrorMessage, Loading } from '@/components/Status'
 import { Button } from '@/components/ui/button'
 import {
@@ -73,6 +74,15 @@ export function TradeDetailPage() {
         </h1>
         <span>{trade.kind_label}</span>
         <StatusBadge trade={trade} />
+        {trade.status === 'OPEN' && (
+          <EarningsBadge
+            date={trade.next_earnings_date}
+            fq={trade.next_earnings_fq}
+            days={trade.earnings_in_days}
+            level={trade.earnings_level}
+            showAll
+          />
+        )}
         <div className="ml-auto flex gap-2">
           {trade.status === 'OPEN' && <Button onClick={() => setDialog('exit')}>決済を登録</Button>}
           {trade.status === 'OPEN' && (

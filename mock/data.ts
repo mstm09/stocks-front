@@ -1,6 +1,7 @@
 // 仮のデータ。`npm run dev:mock` のときだけ使う（本番のファイルには入らない）。
 // 毎回同じ値になるように、決まった種から作った乱数で株価を作る。
 
+import { nextEarnings } from './earnings.ts'
 import type { components } from '../src/api/schema.d.ts'
 
 type Schemas = components['schemas']
@@ -185,6 +186,7 @@ export function indicatorsOf(stock: MockStock, asOf: string): Indicators | undef
       dailyOrder && dailyDown && weeklyOrder && weeklyDown && zone !== 'UPPER' && turnoverOk,
     atr: round2(atr),
     atr_pct: round2((atr / close) * 100),
+    ...nextEarnings(stock.code, LATEST_DATE, asOf),
     chart_url: `/stocks/${stock.code}/chart?as_of=${asOf}`,
   }
 }

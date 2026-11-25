@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router'
+import { EarningsBadge } from '@/components/EarningsBadge'
 import { Badge } from '@/components/ui/badge'
 import {
   Table,
@@ -82,11 +83,22 @@ export function TradeTable({ trades }: { trades: Trade[] }) {
                 }}
               >
                 <TableCell>{t.opened_on}</TableCell>
-                <TableCell className="max-w-56 truncate">
-                  <span className="mr-2 font-mono text-muted-foreground">{formatCode(t.code)}</span>
-                  <Link to={`/trades/${t.id}`} className="hover:underline">
-                    {t.name ?? '（銘柄名なし）'}
-                  </Link>
+                <TableCell className="max-w-72">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono text-muted-foreground">{formatCode(t.code)}</span>
+                    <Link to={`/trades/${t.id}`} className="truncate hover:underline">
+                      {t.name ?? '（銘柄名なし）'}
+                    </Link>
+                    {open && (
+                      <EarningsBadge
+                        date={t.next_earnings_date}
+                        fq={t.next_earnings_fq}
+                        days={t.earnings_in_days}
+                        level={t.earnings_level}
+                        className="shrink-0 px-1.5 py-0 text-[10px]"
+                      />
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>{t.kind_label}</TableCell>
                 <TableCell className="text-right">

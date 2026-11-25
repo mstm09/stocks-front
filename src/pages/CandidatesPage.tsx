@@ -73,9 +73,9 @@ export function CandidatesPage() {
 
       {data && data.count > 0 && (
         // 広い画面では、左に表・右にチャートを並べる。狭い画面では縦に積む。
-        // 表は列が収まる幅（40rem）、チャートは少なくとも 32rem を確保し、残りは半分ずつ分ける。
+        // 表は列が収まる幅（54rem）、チャートは少なくとも 32rem を確保し、残りは半分ずつ分ける。
         // 画面が広いほどチャートが大きくなる。
-        <div className="grid items-start gap-4 xl:grid-cols-[minmax(40rem,1fr)_minmax(32rem,1fr)]">
+        <div className="grid items-start gap-4 xl:grid-cols-[minmax(54rem,1fr)_minmax(32rem,1fr)]">
           <CandidateTable
             candidates={candidates}
             selectedCode={code}
