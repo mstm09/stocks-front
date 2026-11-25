@@ -2,9 +2,9 @@ import { formatPrice } from '@/lib/format'
 import type { Trade } from './api'
 
 /** ロスカットの範囲の文。例「2,100〜2,200円」。範囲がなければ null。 */
-export function stopRangeText(trade: Trade): string | null {
+export function stopRangeText(trade: Trade, unit = '円'): string | null {
   if (trade.stop_range_low == null || trade.stop_range_high == null) return null
-  return `${formatPrice(trade.stop_range_low)}〜${formatPrice(trade.stop_range_high)}円`
+  return `${formatPrice(trade.stop_range_low)}〜${formatPrice(trade.stop_range_high)}${unit}`
 }
 
 /** 範囲の基準（いつの終値とATRか）。例「11/24 の終値 2,000円・ATR 100円」。 */
