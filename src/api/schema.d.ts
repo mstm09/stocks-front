@@ -835,6 +835,26 @@ export interface components {
              */
             streak_at_least?: boolean | null;
             /**
+             * Next Earnings Date
+             * @description 次の決算発表予定日（基準日以降でいちばん近いもの）
+             */
+            next_earnings_date?: string | null;
+            /**
+             * Next Earnings Fq
+             * @description その決算区分（1Q / 2Q / 3Q / FY）
+             */
+            next_earnings_fq?: string | null;
+            /**
+             * Earnings In Days
+             * @description 次の決算まで何日か（暦日）
+             */
+            earnings_in_days?: number | null;
+            /**
+             * Earnings Level
+             * @description 決算が近いときの注意。ALERT=強い注意（既定3日以内）/ WARN=注意（既定14日以内）
+             */
+            earnings_level?: ("ALERT" | "WARN") | null;
+            /**
              * Max Shares
              * @description 1回の損失を基準額の決めた%（既定3%）に収めて建てられる株数。1株あたりの想定損失を 2ATR として計算し、100株単位で切り捨て。0は建てられない。ATRがなければ null
              */
@@ -1690,6 +1710,26 @@ export interface components {
              * @description ロスカットの履歴（古い順）
              */
             stop_changes: components["schemas"]["StopChangeOut"][];
+            /**
+             * Next Earnings Date
+             * @description 次の決算発表予定日（今日以降でいちばん近いもの）
+             */
+            next_earnings_date?: string | null;
+            /**
+             * Next Earnings Fq
+             * @description その決算区分（1Q / 2Q / 3Q / FY）
+             */
+            next_earnings_fq?: string | null;
+            /**
+             * Earnings In Days
+             * @description 次の決算まで何日か（暦日）
+             */
+            earnings_in_days?: number | null;
+            /**
+             * Earnings Level
+             * @description 決算が近いときの注意。ALERT=強い注意（既定3日以内）/ WARN=注意（既定14日以内）
+             */
+            earnings_level?: ("ALERT" | "WARN") | null;
             /**
              * Current Price
              * @description 現在値。保有中は最新の終値（調整前）、決済済みは決済価格の平均

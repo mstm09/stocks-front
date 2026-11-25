@@ -136,6 +136,15 @@ test('一覧は約定価格・現在値・今の損益が中心。保有中の�
   expect(screen.queryByRole('status', { name: '保有中の損益の合計' })).not.toBeInTheDocument()
 })
 
+test('保有中の売買は、決算が近いと印を出す', async () => {
+  mockTradesApi([
+    trade({ next_earnings_date: '2026-08-15', next_earnings_fq: '1Q', earnings_in_days: 1, earnings_level: 'ALERT' }),
+  ])
+  renderApp('/trades')
+  const row = (await screen.findByText('日本取引所グループ')).closest('tr')!
+  expect(within(row).getByText('決算 8/15（あと1日）')).toBeInTheDocument()
+})
+
 test('行のどこを押しても、売買の詳細へ移る（キーボードでも）', async () => {
   mockTradesApi([trade({ current_price: 960, current_pnl: 12000 })])
   const user = userEvent.setup()

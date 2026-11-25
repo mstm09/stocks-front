@@ -172,6 +172,28 @@ test('業種（17業種）を出し、マウスを乗せると33業種と市場�
   expect(panel.getByText('輸送用機器・プライム')).toBeInTheDocument()
 })
 
+test('決算が近い銘柄に印を出す（3日以内は赤、14日以内は橙、まだ先は出さない）', async () => {
+  mockApi([
+    indicators({ next_earnings_date: '2026-08-17', next_earnings_fq: '1Q', earnings_in_days: 3, earnings_level: 'ALERT' }),
+    indicators({ code: '72030', name: 'トヨタ自動車', next_earnings_date: '2026-08-25', next_earnings_fq: '1Q', earnings_in_days: 11, earnings_level: 'WARN' }),
+    indicators({ code: '67580', name: 'ソニーグループ', next_earnings_date: '2026-10-30', next_earnings_fq: '2Q', earnings_in_days: 77, earnings_level: null }),
+  ])
+  renderApp('/candidates')
+  await screen.findByText('日本取引所グループ')
+
+  const row = (name: string) => screen.getByText(name).closest('tr')!
+  const alert = within(row('日本取引所グループ')).getByText('決算 8/17（あと3日）')
+  expect(alert).toHaveAttribute('title', '1Q決算の発表予定日 2026-08-17')
+  expect(alert).toHaveClass('bg-red-600') // 赤で塗る
+  expect(within(row('トヨタ自動車')).getByText('決算 8/25（あと11日）')).toHaveClass('border-amber-500')
+  expect(within(row('ソニーグループ')).queryByText(/決算/)).not.toBeInTheDocument()
+
+  // 右の詳細には、まだ先の決算も控えめに出す
+  await userEvent.click(screen.getByText('ソニーグループ'))
+  const panel = within(await screen.findByRole('region', { name: '選択した銘柄' }))
+  expect(panel.getByText('次の決算 10/30（あと77日）')).toBeInTheDocument()
+})
+
 test('基準額を変えると、すぐ株数とグレーが変わり、次に開いたときも覚えている', async () => {
   mockApi([indicators(), indicators({ code: '72030', name: 'トヨタ自動車', atr: 160 })])
   const { unmount } = renderApp('/candidates')

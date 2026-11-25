@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { EarningsBadge } from '@/components/EarningsBadge'
 import { Badge } from '@/components/ui/badge'
 import { formatCode, formatPrice } from '@/lib/format'
 import type { Indicators } from './api'
@@ -35,6 +36,13 @@ export function StockPanel({ stock, linkToDetail = false }: Props) {
             {[stock.sector33, stock.market_name].filter(Boolean).join('・')}
           </span>
         )}
+        <EarningsBadge
+          date={stock.next_earnings_date}
+          fq={stock.next_earnings_fq}
+          days={stock.earnings_in_days}
+          level={stock.earnings_level}
+          showAll
+        />
         <Badge variant={stock.is_short_candidate ? 'default' : 'secondary'}>
           {stock.is_short_candidate ? '売り建て候補' : '候補ではない'}
         </Badge>

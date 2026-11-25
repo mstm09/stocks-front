@@ -3,6 +3,7 @@
 
 import type { components } from '../src/api/schema.d.ts'
 import { findStock, indicatorsOf, LATEST_DATE } from './data.ts'
+import { nextEarnings } from './earnings.ts'
 
 type Schemas = components['schemas']
 type TradeOut = Schemas['TradeOut']
@@ -94,6 +95,7 @@ function currentValues(t: Trade, exits: { quantity: number; price: number }[], r
   }
   const round = (v: number | null) => (v == null ? null : Math.round(v * 100) / 100)
   return {
+    ...nextEarnings(t.code, LATEST_DATE, LATEST_DATE),
     current_price: bar.close, current_price_date: bar.date, unrealized_pnl: unrealized,
     current_pnl: realized + unrealized, pnl_pct: pct(bar.close), latest_atr: atr,
     stop_range_low: round(low), stop_range_high: round(high), stop_position: position,

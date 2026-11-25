@@ -2445,6 +2445,59 @@
             "title": "Streak At Least",
             "description": "true は、判定の履歴の始まり（または400営業日）まで続いていて、それより前は分からない（「○日以上」）"
           },
+          "next_earnings_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Earnings Date",
+            "description": "次の決算発表予定日（基準日以降でいちばん近いもの）"
+          },
+          "next_earnings_fq": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Earnings Fq",
+            "description": "その決算区分（1Q / 2Q / 3Q / FY）"
+          },
+          "earnings_in_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earnings In Days",
+            "description": "次の決算まで何日か（暦日）"
+          },
+          "earnings_level": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ALERT",
+                  "WARN"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earnings Level",
+            "description": "決算が近いときの注意。ALERT=強い注意（既定3日以内）/ WARN=注意（既定14日以内）"
+          },
           "max_shares": {
             "anyOf": [
               {
@@ -4237,6 +4290,59 @@
             "type": "array",
             "title": "Stop Changes",
             "description": "ロスカットの履歴（古い順）"
+          },
+          "next_earnings_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Earnings Date",
+            "description": "次の決算発表予定日（今日以降でいちばん近いもの）"
+          },
+          "next_earnings_fq": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Earnings Fq",
+            "description": "その決算区分（1Q / 2Q / 3Q / FY）"
+          },
+          "earnings_in_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earnings In Days",
+            "description": "次の決算まで何日か（暦日）"
+          },
+          "earnings_level": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ALERT",
+                  "WARN"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earnings Level",
+            "description": "決算が近いときの注意。ALERT=強い注意（既定3日以内）/ WARN=注意（既定14日以内）"
           },
           "current_price": {
             "anyOf": [
