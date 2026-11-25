@@ -1,4 +1,4 @@
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { Badge } from '@/components/ui/badge'
 import {
   Table,
@@ -24,13 +24,15 @@ export function StatusBadge({ trade }: { trade: Trade }) {
 }
 
 /**
- * 売買の一覧。約定価格・現在値・今の損益が中心。銘柄名を押すと、1件の画面へ移る。
+ * 売買の一覧。約定価格・現在値・今の損益が中心。行のどこを押しても、1件の画面へ移る
+ * （キーボードでは、行を選んで Enter）。
  * - 現在値: 保有中は最新の終値、決済済みは決済価格の平均
  * - 損益: 保有中は 含み損益 ＋ 一部決済の確定損益、決済済みは 確定損益
  * - ロスカット: 範囲（終値から1〜2ATR）から外れていたら印
  * - 範囲: 今の終値とATRから見た、ロスカットを置く範囲（保有中だけ）
  */
 export function TradeTable({ trades }: { trades: Trade[] }) {
+  const navigate = useNavigate()
   return (
     <div className="rounded-lg border bg-card">
       <Table className="tabular-nums">
@@ -69,7 +71,16 @@ export function TradeTable({ trades }: { trades: Trade[] }) {
             const open = t.status === 'OPEN'
             const range = stopRangeText(t, '')
             return (
-              <TableRow key={t.id}>
+              <TableRow
+                key={t.id}
+                tabIndex={0}
+                aria-label={`売買 #${t.id} ${t.name ?? formatCode(t.code)} の詳細を開く`}
+                className="cursor-pointer focus-visible:outline-2 focus-visible:outline-ring"
+                onClick={() => navigate(`/trades/${t.id}`)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') navigate(`/trades/${t.id}`)
+                }}
+              >
                 <TableCell>{t.opened_on}</TableCell>
                 <TableCell className="max-w-56 truncate">
                   <span className="mr-2 font-mono text-muted-foreground">{formatCode(t.code)}</span>
