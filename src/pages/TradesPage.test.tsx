@@ -89,20 +89,59 @@ function mockTradesApi(initial: Trade[]) {
   return sent
 }
 
-test('売買の一覧を出し、状態で絞れる', async () => {
+test('一覧は約定価格・現在値・今の損益が中心。保有中の損益の合計を出し、状態で絞れる', async () => {
   mockTradesApi([
-    trade(),
-    trade({ id: 2, name: 'トヨタ自動車', status: 'CLOSED', remaining_quantity: 0, realized_pnl: -6000, r_multiple: -1, exits: [{ id: 1, closed_on: '2026-08-10', quantity: 300, price: 1020, fee: 0, pnl: -6000, memo: null }] }),
+    // 売り建て 1,000円 × 300株、終値 960円 → +12,000円（+4.00%）。ロスカット 1,060円は 2ATR より遠い
+    trade({
+      current_price: 960, current_price_date: '2026-08-14', unrealized_pnl: 12000, current_pnl: 12000, pnl_pct: 4,
+      latest_atr: 20, stop_range_low: 980, stop_range_high: 1000, stop_position: 'FAR', stop_pnl: -18000,
+    }),
+    // 越えている
+    trade({
+      id: 3, code: '67580', name: 'ソニーグループ', current_price: 3100, current_price_date: '2026-08-14',
+      current_pnl: -3000, pnl_pct: -1, stop_loss_price: 3080, stop_position: 'HIT', stop_pnl: -1000,
+      stop_range_low: 3150, stop_range_high: 3200, latest_atr: 50,
+    }),
+    trade({
+      id: 2, name: 'トヨタ自動車', status: 'CLOSED', remaining_quantity: 0, realized_pnl: -6000, r_multiple: -1,
+      current_price: 1020, current_price_date: '2026-08-10', current_pnl: -6000, pnl_pct: -2,
+      exits: [{ id: 1, closed_on: '2026-08-10', quantity: 300, price: 1020, fee: 0, pnl: -6000, memo: null }],
+    }),
   ])
   renderApp('/trades')
 
-  expect(await screen.findByText('日本取引所グループ')).toBeInTheDocument()
-  expect(screen.getByText('-6,000')).toHaveClass('text-down')
-  expect(screen.getByText('-1.00R')).toBeInTheDocument()
+  const jpx = (await screen.findByText('日本取引所グループ')).closest('tr')!
+  expect(within(jpx).getByText('960')).toHaveAttribute('title', '2026-08-14 の終値')
+  expect(within(jpx).getByText('+12,000')).toHaveClass('text-up')
+  expect(within(jpx).getByText('+4.00%')).toBeInTheDocument()
+  expect(within(jpx).getByText('遠すぎ')).toBeInTheDocument()
+  expect(within(jpx).getByText('遠すぎ').closest('td')).toHaveAttribute(
+    'title',
+    '範囲 980〜1,000円（2026-08-14 の終値 960円・ATR 20円）',
+  )
+  expect(within(screen.getByText('ソニーグループ').closest('tr')!).getByText('越えている')).toBeInTheDocument()
+
+  const toyota = screen.getByText('トヨタ自動車').closest('tr')!
+  expect(within(toyota).getByText('1,020')).toHaveAttribute('title', '2026-08-10 に決済')
+  expect(within(toyota).getByText('-6,000')).toHaveClass('text-down')
+  // 番号・R倍数・自己採点は一覧に出さない
+  expect(screen.queryByText('-1.00R')).not.toBeInTheDocument()
+  expect(screen.queryByRole('columnheader', { name: /番号|R倍数|自己採点/ })).not.toBeInTheDocument()
+
+  // 保有中（決済済みは入らない）: 12,000 − 3,000
+  expect(screen.getByRole('status', { name: '保有中の損益の合計' })).toHaveTextContent('保有中の損益の合計（2件）+9,000円')
 
   await userEvent.click(screen.getByRole('button', { name: '決済済み' }))
   expect(await screen.findByText('トヨタ自動車')).toBeInTheDocument()
   expect(screen.queryByText('日本取引所グループ')).not.toBeInTheDocument()
+  expect(screen.queryByRole('status', { name: '保有中の損益の合計' })).not.toBeInTheDocument()
+})
+
+test('利益を確保できているロスカットは、範囲から外れていても印を出さない', async () => {
+  mockTradesApi([trade({ stop_loss_price: 990, stop_position: 'NEAR', stop_pnl: 3000, current_pnl: 0 })])
+  renderApp('/trades')
+  const row = (await screen.findByText('日本取引所グループ')).closest('tr')!
+  expect(within(row).queryByText('近すぎ')).not.toBeInTheDocument()
 })
 
 test('売買を登録すると、その売買の画面へ移る', async () => {

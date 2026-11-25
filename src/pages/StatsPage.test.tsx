@@ -27,7 +27,7 @@ function mockApi(stats: unknown) {
   })
 }
 
-test('累計と年ごとの成績、保有中の含み損益を出す（入出金は出さない）', async () => {
+test('累計と年ごとの成績を出す（入出金・保有中は出さない）', async () => {
   mockApi({
     total: row({}),
     years: [
@@ -52,8 +52,8 @@ test('累計と年ごとの成績、保有中の含み損益を出す（入出�
   expect(within(rows[0]).getByText('+13,300')).toBeInTheDocument()
   expect(within(rows[1]).getByText('50.0%')).toBeInTheDocument()
 
-  const positions = within(screen.getByRole('region', { name: '保有中' }))
-  expect(positions.getAllByText('+12,000').length).toBeGreaterThan(0)
+  // 保有中は、売買記録の一覧で見る
+  expect(screen.queryByRole('region', { name: '保有中' })).not.toBeInTheDocument()
   expect(screen.queryByText(/入出金|現金残高|口座全体/)).not.toBeInTheDocument()
 })
 

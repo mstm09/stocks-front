@@ -1690,6 +1690,51 @@ export interface components {
              * @description ロスカットの履歴（古い順）
              */
             stop_changes: components["schemas"]["StopChangeOut"][];
+            /**
+             * Current Price
+             * @description 現在値。保有中は最新の終値（調整前）、決済済みは決済価格の平均
+             */
+            current_price?: number | null;
+            /**
+             * Current Price Date
+             * @description 現在値の日（終値の日・決済日）
+             */
+            current_price_date?: string | null;
+            /**
+             * Unrealized Pnl
+             * @description 含み損益（保有中だけ）。(終値 − 新規価格) × 残りの株数。費用は含まない
+             */
+            unrealized_pnl?: number | null;
+            /**
+             * Current Pnl
+             * @description 今の損益。保有中は 確定損益（一部決済）＋ 含み損益、決済済みは 確定損益
+             */
+            current_pnl?: number | null;
+            /**
+             * Pnl Pct
+             * @description 新規価格から現在値までの値動き（%）。利益の向きがプラス
+             */
+            pnl_pct?: number | null;
+            /**
+             * Latest Atr
+             * @description 最新のATR（保有中だけ）
+             */
+            latest_atr?: number | null;
+            /**
+             * Stop Range Low
+             * @description ロスカットの範囲の下限（保有中だけ。売り建ては 終値＋1ATR）
+             */
+            stop_range_low?: number | null;
+            /**
+             * Stop Range High
+             * @description ロスカットの範囲の上限（売り建ては 終値＋2ATR）
+             */
+            stop_range_high?: number | null;
+            /**
+             * Stop Position
+             * @description 今のロスカットの位置。HIT=終値が越えている / NEAR=1ATRより近い / IN=範囲内 / FAR=2ATRより遠い
+             */
+            stop_position?: ("HIT" | "NEAR" | "IN" | "FAR") | null;
         };
         /**
          * TradeUpdate
