@@ -136,6 +136,22 @@ test('一覧は約定価格・現在値・今の損益が中心。保有中の�
   expect(screen.queryByRole('status', { name: '保有中の損益の合計' })).not.toBeInTheDocument()
 })
 
+test('行のどこを押しても、売買の詳細へ移る（キーボードでも）', async () => {
+  mockTradesApi([trade({ current_price: 960, current_pnl: 12000 })])
+  const user = userEvent.setup()
+  const { unmount } = renderApp('/trades')
+  const row = (await screen.findByText('日本取引所グループ')).closest('tr')!
+  await user.click(within(row).getByText('+12,000')) // 銘柄名ではなく、損益のところ
+  expect(await screen.findByRole('heading', { name: /日本取引所グループ/ })).toBeInTheDocument()
+  unmount()
+
+  renderApp('/trades')
+  const again = (await screen.findByText('日本取引所グループ')).closest('tr')!
+  again.focus()
+  await user.keyboard('{Enter}')
+  expect(await screen.findByRole('heading', { name: /日本取引所グループ/ })).toBeInTheDocument()
+})
+
 test('利益を確保できているロスカットは、範囲から外れていても印を出さない', async () => {
   mockTradesApi([trade({ stop_loss_price: 990, stop_position: 'NEAR', stop_pnl: 3000, current_pnl: 0 })])
   renderApp('/trades')
