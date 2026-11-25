@@ -8,19 +8,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { type StatsRow, usePortfolio, useStats } from '@/features/trades/api'
-import { PositionTable } from '@/features/trades/PositionTable'
-import { changeColor, formatCode, formatPnl } from '@/lib/format'
+import { type StatsRow, useStats } from '@/features/trades/api'
+import { changeColor, formatPnl } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 /**
  * 成績（/stats）。売買記録から、システム開始からの累計と、年ごとの成績を出す。
  * すべて決済した売買を、最後に決済した日の年で集計する。入出金は使わない。
- * 下に、保有中の売買の含み損益を出す（成績には入らない）。
  */
 export function StatsPage() {
   const stats = useStats()
-  const portfolio = usePortfolio(undefined)
 
   return (
     <div className="space-y-6">
@@ -36,35 +33,6 @@ export function StatsPage() {
       {stats.data && <Total row={stats.data.total} />}
       {stats.data && stats.data.years.length > 0 && <YearTable rows={stats.data.years} />}
 
-      <section aria-labelledby="positions-heading" className="space-y-2">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h2 id="positions-heading" className="font-semibold">
-            保有中
-          </h2>
-          {portfolio.data && portfolio.data.positions.length > 0 && (
-            <p className="text-sm text-muted-foreground">
-              含み損益の合計{' '}
-              <span className={cn('font-medium', changeColor(portfolio.data.unrealized_pnl))}>
-                {formatPnl(portfolio.data.unrealized_pnl)}円
-              </span>
-              （成績には入りません。{portfolio.data.as_of_date} 時点）
-            </p>
-          )}
-        </div>
-        {portfolio.isPending && <Loading />}
-        {portfolio.error && <ErrorMessage error={portfolio.error} />}
-        {portfolio.data &&
-          (portfolio.data.positions.length > 0 ? (
-            <PositionTable positions={portfolio.data.positions} />
-          ) : (
-            <p className="text-sm text-muted-foreground">保有中の売買はありません。</p>
-          ))}
-        {portfolio.data && portfolio.data.unpriced_codes.length > 0 && (
-          <p className="text-sm text-destructive">
-            終値がなく、評価できなかった銘柄: {portfolio.data.unpriced_codes.map(formatCode).join('、')}
-          </p>
-        )}
-      </section>
     </div>
   )
 }

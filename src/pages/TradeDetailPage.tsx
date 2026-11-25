@@ -19,8 +19,18 @@ import {
   MoveStopDialog,
   ReviewDialog,
 } from '@/features/trades/TradeDialogs'
+import { StopPositionBadge } from '@/features/trades/StopPositionBadge'
+import { stopRangeBasis, stopRangeText } from '@/features/trades/stopRange'
 import { StatusBadge } from '@/features/trades/TradeTable'
-import { changeColor, formatCode, formatPnl, formatPrice, formatR, formatYen } from '@/lib/format'
+import {
+  changeColor,
+  formatChange,
+  formatCode,
+  formatPnl,
+  formatPrice,
+  formatR,
+  formatYen,
+} from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 /** 開いているフォームの種類。null は、どれも開いていない。 */
@@ -105,6 +115,23 @@ export function TradeDetailPage() {
           </Item>
           {trade.initial_stop_price != null && trade.initial_stop_price !== trade.stop_loss_price && (
             <Item label="最初のロスカット">{formatPrice(trade.initial_stop_price)}円</Item>
+          )}
+          {trade.status === 'OPEN' && stopRangeText(trade) && (
+            <Item label="ロスカットの範囲">
+              {stopRangeText(trade)}
+              <span className="ml-2">
+                <StopPositionBadge trade={trade} showInRange />
+              </span>
+              <span className="ml-2 text-xs text-muted-foreground">（{stopRangeBasis(trade)}）</span>
+            </Item>
+          )}
+          {trade.status === 'OPEN' && trade.current_price != null && (
+            <Item label="現在値">
+              {formatPrice(trade.current_price)}円
+              <span className={cn('ml-2 font-medium', changeColor(trade.current_pnl))}>
+                {formatPnl(trade.current_pnl)}円（{formatChange(trade.pnl_pct)}）
+              </span>
+            </Item>
           )}
           <Item label="想定損失">
             {trade.risk_amount == null ? '-' : `${formatYen(trade.risk_amount)}円`}

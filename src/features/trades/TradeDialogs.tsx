@@ -8,6 +8,7 @@ import { today } from '@/lib/date'
 import { type StopCandidate, useTrailingStopCandidates } from '@/features/orders/api'
 import { StopCandidateButtons } from '@/features/orders/OrderDialog'
 import { formatPnl, formatPrice, formatYen } from '@/lib/format'
+import { stopRangeBasis, stopRangeText } from './stopRange'
 import { fromNumber, toNumber, toText } from '@/lib/number'
 import {
   KIND_LABELS,
@@ -353,7 +354,9 @@ export function MoveStopDialog({ trade, onClose }: DialogProps & { trade: Trade 
       open
       onOpenChange={onClose}
       title="ロスカットを動かす"
-      description={`今のロスカット: ${now}（新規 ${formatPrice(trade.entry_price)}円・残り ${trade.remaining_quantity}株）。変更は履歴に残ります。`}
+      description={`今のロスカット: ${now}（新規 ${formatPrice(trade.entry_price)}円・残り ${trade.remaining_quantity}株）。${
+        stopRangeText(trade) ? `範囲は ${stopRangeText(trade)}（${stopRangeBasis(trade)}）。` : ''
+      }変更は履歴に残ります。`}
       submitLabel="記録する"
       pending={add.isPending}
       error={add.error}

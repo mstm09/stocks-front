@@ -2,10 +2,12 @@ import { useNavigate } from 'react-router'
 import { Empty, ErrorMessage, Loading } from '@/components/Status'
 import { Button } from '@/components/ui/button'
 import { OrderSection } from '@/features/orders/OrderSection'
-import { type TradeStatus, useTrades } from '@/features/trades/api'
+import { type Trade, type TradeStatus, useTrades } from '@/features/trades/api'
 import { AddTradeDialog } from '@/features/trades/TradeDialogs'
 import { TradeTable } from '@/features/trades/TradeTable'
+import { changeColor, formatPnl } from '@/lib/format'
 import { useUrlParams } from '@/lib/useUrlParams'
+import { cn } from '@/lib/utils'
 
 const FILTERS: { value: TradeStatus | undefined; label: string }[] = [
   { value: undefined, label: '全部' },
@@ -52,6 +54,7 @@ export function TradesPage() {
           ))}
         </div>
       </div>
+      {trades && <OpenTotal trades={trades} />}
       {isPending && <Loading />}
       {error && <ErrorMessage error={error} />}
       {trades &&
@@ -67,6 +70,35 @@ export function TradesPage() {
           onClose={() => url.set('new', undefined)}
           onAdded={(trade) => navigate(`/trades/${trade.id}`)}
         />
+      )}
+    </div>
+  )
+}
+
+/**
+ * 保有中の損益の合計（含み損益 ＋ 一部決済の確定損益）。保有中の売買がなければ出さない。
+ * 終値がなく損益を出せない売買は、合計に入れずに件数を出す。
+ */
+function OpenTotal({ trades }: { trades: Trade[] }) {
+  const open = trades.filter((t) => t.status === 'OPEN')
+  if (open.length === 0) return null
+  const priced = open.filter((t) => t.current_pnl != null)
+  const total = priced.reduce((sum, t) => sum + (t.current_pnl ?? 0), 0)
+  return (
+    <div
+      role="status"
+      aria-label="保有中の損益の合計"
+      className="flex flex-wrap items-baseline gap-x-3 rounded-lg border bg-card px-4 py-3"
+    >
+      <span className="text-sm text-muted-foreground">保有中の損益の合計（{open.length}件）</span>
+      <span className={cn('text-2xl font-semibold tabular-nums', changeColor(total))}>
+        {formatPnl(total)}
+        <span className="ml-1 text-xs font-normal text-muted-foreground">円</span>
+      </span>
+      {priced.length < open.length && (
+        <span className="text-xs text-destructive">
+          終値がない {open.length - priced.length}件は、合計に入っていません
+        </span>
       )}
     </div>
   )

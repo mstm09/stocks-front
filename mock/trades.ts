@@ -2,7 +2,7 @@
 // 計算の決まりは、stock-analysis の docs/trades.md と同じ。
 
 import type { components } from '../src/api/schema.d.ts'
-import { findStock, LATEST_DATE } from './data.ts'
+import { findStock, indicatorsOf, LATEST_DATE } from './data.ts'
 
 type Schemas = components['schemas']
 type TradeOut = Schemas['TradeOut']
@@ -66,6 +66,40 @@ const cash: Cash[] = [{ id: 1, occurred_on: '2026-08-01', amount: 3_000_000, mem
 
 const direction = (kind: string) => (kind === 'MARGIN_SHORT' ? -1 : 1)
 
+/**
+ * 現在値・今の損益・ロスカットの範囲（本物は stock-analysis の trades/current.py）。
+ * 保有中は最新の終値と、仮のデータの指標のATRから。決済済みは決済価格の平均。
+ */
+function currentValues(t: Trade, exits: { quantity: number; price: number }[], remaining: number, realized: number, stop: number | null) {
+  const dir = direction(t.kind)
+  const pct = (price: number) => Math.round(((price - t.entry_price) / t.entry_price) * 100 * dir * 100) / 100
+  if (remaining === 0) {
+    const qty = exits.reduce((a, e) => a + e.quantity, 0)
+    if (!qty) return {}
+    const avg = exits.reduce((a, e) => a + e.price * e.quantity, 0) / qty
+    const lastExit = t.exits.map((e) => e.closed_on).sort().at(-1) ?? null
+    return { current_price: Math.round(avg * 100) / 100, current_price_date: lastExit, current_pnl: realized, pnl_pct: pct(avg) }
+  }
+  const stock = findStock(t.code)
+  const bar = stock?.bars.at(-1)
+  if (!stock || !bar) return {}
+  const atr = indicatorsOf(stock, bar.date)?.atr ?? null
+  const unrealized = (bar.close - t.entry_price) * remaining * dir
+  const [low, high] =
+    atr == null ? [null, null] : dir < 0 ? [bar.close + atr, bar.close + 2 * atr] : [bar.close - 2 * atr, bar.close - atr]
+  let position: 'HIT' | 'NEAR' | 'IN' | 'FAR' | null = null
+  if (stop != null) {
+    const gap = (stop - bar.close) * -dir
+    position = gap <= 0 ? 'HIT' : atr == null ? null : gap < atr ? 'NEAR' : gap > 2 * atr ? 'FAR' : 'IN'
+  }
+  const round = (v: number | null) => (v == null ? null : Math.round(v * 100) / 100)
+  return {
+    current_price: bar.close, current_price_date: bar.date, unrealized_pnl: unrealized,
+    current_pnl: realized + unrealized, pnl_pct: pct(bar.close), latest_atr: atr,
+    stop_range_low: round(low), stop_range_high: round(high), stop_position: position,
+  }
+}
+
 function toOut(t: Trade): TradeOut {
   const exits = t.exits.map((e) => ({
     ...e,
@@ -88,6 +122,7 @@ function toOut(t: Trade): TradeOut {
     initial_stop_price: initial,
     stop_pnl: stop == null || closed ? null : (stop - t.entry_price) * remaining * direction(t.kind),
     stop_changes: stops.map((s, i) => ({ ...s, previous_price: i === 0 ? null : stops[i - 1].price })),
+    ...currentValues(t, exits, remaining, realized, stop),
     name: findStock(t.code)?.name ?? null,
     kind_label: KIND_LABELS[t.kind],
     status: closed ? 'CLOSED' : 'OPEN',
